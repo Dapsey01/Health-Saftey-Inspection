@@ -499,9 +499,9 @@ const previewRight = [
           <div>
             {STRUCTURE.map((group) => (
               <div key={group.floor} style={{ marginBottom: 16 }}>
-                <div style={group.building === "Separate" ? styles.floorHeaderPurple : styles.floorHeaderGold}
-                  {group.floor}
-                </div>
+               <div style={group.building === "Separate" ? styles.floorHeaderPurple : styles.floorHeaderGold}>
+  {group.floor}
+</div>
 
                 {group.areas.map((area) => (
                   <div key={area.name} style={{ marginBottom: 10 }}>
