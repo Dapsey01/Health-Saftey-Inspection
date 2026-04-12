@@ -853,7 +853,6 @@ const previewRight = [
     </div>
   );
 }
-
 const styles = {
   page: {
     background: "#020617",
