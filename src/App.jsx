@@ -488,20 +488,15 @@ const previewRight = [
           <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
           <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
             {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
-          </div>
-        </div>
+          </div
       ))}
-    </div>
-  </div>
-</div>
           </div>
         </div>
-
         <div style={styles.mainStack}>
           <div>
             {STRUCTURE.map((group) => (
               <div key={group.floor} style={{ marginBottom: 16 }}>
-                <div style={group.building === "Separate" ? styles.floorHeaderPurple : styles.floorHeaderGold}>
+                <div style={group.building === "Separate" ? styles.floorHeaderPurple : styles.floorHeaderGold}
                   {group.floor}
                 </div>
 
