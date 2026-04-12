@@ -1,267 +1,281 @@
-import React, { useMemo, useState } from "react";
+  const reportData = useMemo(() => {
+    const floorSummary = STRUCTURE.map((group) => {
+      let issues = 0;
 
-const STATUS_OPTIONS = ["OK", "Issue"];
-const ACTION_OPTIONS = ["No Action", "Call Made", "HOTSOS Logged"];
-const ISSUE_OPTIONS = {
-  "Hand Sink": ["Needs Cleaning", "Needs Soap", "Needs Paper Towels", "No Hot Water"],
-  "Ice Machine": ["Not working", "Needs Cleaning"],
-  "Reach-in Fridge": ["Temp Too Low", "Temp Too High"],
-  "Walk-in Cooler": ["Temp Too Low", "Temp Too High"],
-};
+      group.areas.forEach((area) => {
+        Object.values(form.areas[area.name]?.items || {}).forEach((item) => {
+          if (item.status === "Issue") issues++;
+        });
+      });
 
-const STRUCTURE = [
-  { floor: "1st Floor", building: "Main", areas: [
-    { name: "Pantry 1A", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] },
-    { name: "Pantry 1B", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] },
-    { name: "Main Walk-in", items: ["Walk-in Cooler"] },
-    { name: "Specialty Cooler", items: ["Walk-in Cooler"] },
-  ]},
-  { floor: "2nd Floor", building: "Main", areas: [
-    { name: "Pantry 2A", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] },
-    { name: "Pantry 2B", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] },
-    { name: "201 Pantry", items: ["Hand Sink", "Reach-in Fridge"] },
-    { name: "204 Pantry", items: ["Hand Sink", "Reach-in Fridge"] },
-    { name: "205 Ice Machine", items: ["Ice Machine"] },
-  ]},
-  { floor: "3rd Floor", building: "Main", areas: [
-    { name: "Pantry 3A", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] },
-    { name: "Pantry 3B", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] },
-  ]},
-  { floor: "Marquee", building: "Main", areas: [
-    { name: "Marquee", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] },
-  ]},
-  { floor: "Signature Tower", building: "Separate", areas: [
-    { name: "Signature Tower", items: ["Hand Sink", "Reach-in Fridge", "Walk-in Cooler"] },
-  ]},
-  { floor: "G.G.A. Kitchen", building: "Separate", areas: [
-    { name: "G.G.A. Kitchen", items: ["Hand Sink", "Reach-in Fridge", "Walk-in Cooler"] },
-  ]},
-];
+      return {
+        floor: group.floor,
+        status: issues === 0 ? "Clear" : `${issues} Issue${issues > 1 ? "s" : ""}`,
+        issues,
+      };
+    });
 
-function isTempItem(item) { return item === "Reach-in Fridge" || item === "Walk-in Cooler"; }
-function tempValues() { return Array.from({ length: 61 }, (_, i) => i - 10); }
+    const flaggedAreas = [];
 
-function buildInitialState() {
-  const state = { inspector: "", date: "", time: "", areas: {} };
-  STRUCTURE.forEach((group) => {
-    group.areas.forEach((area) => {
-      state.areas[area.name] = { notes: "", photos: [], items: {} };
-      area.items.forEach((item) => {
-        state.areas[area.name].items[item] = {
-          status: "", issue: "", temperature: "", engineerAction: "", hotsos: ""
-        };
+    STRUCTURE.forEach((group) => {
+      group.areas.forEach((area) => {
+        const areaIssues = [];
+        const temps = [];
+
+        Object.entries(form.areas[area.name]?.items || {}).forEach(([itemName, item]) => {
+          if ((itemName === "Reach-in Fridge" || itemName === "Walk-in") && item.temperature) {
+            temps.push({
+              item: itemName,
+              temp: `${item.temperature}°F`,
+            });
+          }
+
+          if (item.status === "Issue") {
+            areaIssues.push({
+              item: itemName,
+              issue: item.issue || "Issue noted",
+              temp: item.temperature ? `${item.temperature}°F` : "",
+              engineerAction: item.engineerAction || "",
+              hotsos: item.hotsos || "",
+            });
+          }
+        });
+
+        const notes = form.areas[area.name]?.notes?.trim() || "";
+
+        if (areaIssues.length || temps.length || notes) {
+          flaggedAreas.push({
+            floor: group.floor,
+            area: area.name,
+            issues: areaIssues,
+            temps,
+            notes,
+          });
+        }
       });
     });
-  });
-  return state;
-}
 
-export default function App() {
-  const [form, setForm] = useState(buildInitialState);
-  const [openAreas, setOpenAreas] = useState({});
+    return { floorSummary, flaggedAreas };
+  }, [form]);
 
-  const setTopField = (field, value) => setForm((p) => ({ ...p, [field]: value }));
+  const htmlReport = useMemo(() => {
+    const summaryRows = reportData.floorSummary
+      .map(
+        (f) => `
+          <tr>
+            <td style="padding:10px 12px;border:1px solid #d1d5db;font-weight:600;">${f.floor}</td>
+            <td style="padding:10px 12px;border:1px solid #d1d5db;color:${f.issues === 0 ? "#166534" : "#991b1b"};font-weight:700;">
+              ${f.status}
+            </td>
+          </tr>
+        `
+      )
+      .join("");
 
-  const setItemField = (area, item, field, value) => {
-    setForm((prev) => {
-      const next = structuredClone(prev);
-      next.areas[area].items[item][field] = value;
-      if (field === "status" && value !== "Issue") {
-        next.areas[area].items[item].issue = "";
-        next.areas[area].items[item].engineerAction = "";
-        next.areas[area].items[item].hotsos = "";
-      }
-      if (field === "engineerAction" && value !== "HOTSOS Logged") {
-        next.areas[area].items[item].hotsos = "";
-      }
-      return next;
-    });
-  };
+    const areaBlocks =
+      reportData.flaggedAreas.length === 0
+        ? `
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:16px;margin-top:16px;">
+            <div style="font-size:16px;font-weight:700;color:#166534;">No issues noted</div>
+            <div style="margin-top:6px;color:#374151;">All inspected areas are currently clear.</div>
+          </div>
+        `
+        : reportData.flaggedAreas
+            .map((area) => {
+              const issueList = area.issues.length
+                ? `
+                  <div style="margin-top:12px;">
+                    <div style="font-size:13px;font-weight:800;color:#92400e;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;">
+                      Areas Requiring Attention
+                    </div>
+                    ${area.issues
+                      .map(
+                        (issue) => `
+                          <div style="border:1px solid #fde68a;background:#fffbeb;border-radius:12px;padding:12px;margin-bottom:10px;">
+                            <div style="font-weight:700;color:#111827;">${issue.item}</div>
+                            <div style="margin-top:4px;color:#374151;"><strong>Issue:</strong> ${issue.issue}</div>
+                            ${issue.temp ? `<div style="margin-top:4px;color:#374151;"><strong>Recorded Temp:</strong> ${issue.temp}</div>` : ""}
+                            ${issue.engineerAction ? `<div style="margin-top:4px;color:#374151;"><strong>Engineer Action:</strong> ${issue.engineerAction}</div>` : ""}
+                            ${issue.hotsos ? `<div style="margin-top:4px;color:#374151;"><strong>HOTSOS #:</strong> ${issue.hotsos}</div>` : ""}
+                          </div>
+                        `
+                      )
+                      .join("")}
+                  </div>
+                `
+                : "";
 
-  const setAreaNotes = (area, value) => setForm((prev) => ({
-    ...prev, areas: { ...prev.areas, [area]: { ...prev.areas[area], notes: value } }
-  }));
+              const tempTable = area.temps.length
+                ? `
+                  <div style="margin-top:12px;">
+                    <div style="font-size:13px;font-weight:800;color:#1e3a8a;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;">
+                      Temperature Log
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden;">
+                      <thead>
+                        <tr style="background:#dbeafe;">
+                          <th style="text-align:left;padding:10px 12px;border:1px solid #bfdbfe;">Equipment</th>
+                          <th style="text-align:left;padding:10px 12px;border:1px solid #bfdbfe;">Temperature</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${area.temps
+                          .map(
+                            (t) => `
+                              <tr>
+                                <td style="padding:10px 12px;border:1px solid #dbeafe;">${t.item}</td>
+                                <td style="padding:10px 12px;border:1px solid #dbeafe;">${t.temp}</td>
+                              </tr>
+                            `
+                          )
+                          .join("")}
+                      </tbody>
+                    </table>
+                  </div>
+                `
+                : "";
 
-  const addPhotos = (area, files) => {
-    if (!files || !files.length) return;
-    const readers = Array.from(files).map(file => new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.readAsDataURL(file);
-    }));
-    Promise.all(readers).then((images) => {
-      setForm((prev) => ({
-        ...prev,
-        areas: { ...prev.areas, [area]: { ...prev.areas[area], photos: [...prev.areas[area].photos, ...images] } }
-      }));
-    });
-  };
-
-  const removePhoto = (area, index) => {
-    setForm((prev) => {
-      const photos = [...prev.areas[area].photos];
-      photos.splice(index, 1);
-      return { ...prev, areas: { ...prev.areas, [area]: { ...prev.areas[area], photos } } };
-    });
-  };
-
-  const floorSummary = useMemo(() => STRUCTURE.map((group) => {
-    let issues = 0;
-    group.areas.forEach((area) => Object.values(form.areas[area.name].items).forEach((item) => { if (item.status === "Issue") issues += 1; }));
-    return { floor: group.floor, issues };
-  }), [form]);
-
-  const emailReport = useMemo(() => {
-    const lines = [];
-    lines.push("CONFERENCE CENTER HEALTH & SAFETY WALK REPORT", "");
-    lines.push(`Inspector: ${form.inspector}`);
-    lines.push(`Date: ${form.date}`);
-    lines.push(`Time: ${form.time}`, "", "FLOOR SUMMARY");
-    floorSummary.forEach((f) => lines.push(`- ${f.floor}: ${f.issues === 0 ? "Clear" : `${f.issues} issue(s)`}`));
-    lines.push("", "AREAS REQUIRING ATTENTION");
-    let found = false;
-    STRUCTURE.forEach((group) => group.areas.forEach((area) => Object.entries(form.areas[area.name].items).forEach(([itemName, item]) => {
-      if (item.status === "Issue") {
-        found = true;
-        const bits = [area.name, itemName];
-        if (item.issue) bits.push(item.issue);
-        if (item.temperature) bits.push(`${item.temperature}°F`);
-        if (item.engineerAction && item.engineerAction !== "No Action") bits.push(item.engineerAction);
-        if (item.hotsos) bits.push(`HOTSOS #${item.hotsos}`);
-        lines.push(`- ${bits.join(" — ")}`);
-      }
-    })));
-    if (!found) lines.push("- No issues noted");
-    lines.push("", "TEMPERATURE LOG");
-    STRUCTURE.forEach((group) => group.areas.forEach((area) => Object.entries(form.areas[area.name].items).forEach(([itemName, item]) => {
-      if (isTempItem(itemName) && item.temperature) lines.push(`- ${area.name} — ${itemName} — ${item.temperature}°F`);
-    })));
-    lines.push("", "NOTES");
-    STRUCTURE.forEach((group) => group.areas.forEach((area) => {
-      if (form.areas[area.name].notes.trim()) lines.push(`- ${area.name}: ${form.areas[area.name].notes.trim()}`);
-    }));
-    return lines.join("\\n");
-  }, [form, floorSummary]);
-
-  const copyReport = async () => {
-    try { await navigator.clipboard.writeText(emailReport); alert("Report copied."); }
-    catch { alert("Could not copy the report on this browser."); }
-  };
-
-  return (
-    <div className="app-shell">
-      <div className="app-card">
-        <div className="top-header">Conference Center Health & Safety Walk</div>
-        <div className="top-fields">
-          <input placeholder="Inspector" value={form.inspector} onChange={(e) => setTopField("inspector", e.target.value)} />
-          <input type="date" value={form.date} onChange={(e) => setTopField("date", e.target.value)} />
-          <input type="time" value={form.time} onChange={(e) => setTopField("time", e.target.value)} />
-        </div>
-      </div>
-
-      <div className="app-card">
-        <div className="summary-title">Floor Summary</div>
-        <div className="summary-grid">
-          {floorSummary.map((f) => (
-            <div key={f.floor} className="summary-row">
-              <span>{f.floor}</span>
-              <span className={f.issues === 0 ? "badge clear" : "badge issue"}>
-                {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {STRUCTURE.map((group) => (
-        <div key={group.floor} className="floor-block">
-          <div className={group.building === "Separate" ? "floor-header separate" : "floor-header main"}>{group.floor}</div>
-          {group.areas.map((area) => (
-            <div key={area.name} className="area-wrap">
-              <button type="button" className="area-button" onClick={() => setOpenAreas((prev) => ({ ...prev, [area.name]: !prev[area.name] }))}>
-                <span>{area.name}</span><span>{openAreas[area.name] ? "▲" : "▼"}</span>
-              </button>
-              {openAreas[area.name] && (
-                <div className="area-body">
-                  {area.items.map((item) => {
-                    const data = form.areas[area.name].items[item];
-                    const issueMode = data.status === "Issue";
-                    return (
-                      <div key={item} className="item-card">
-                        <div className="item-title">{item}</div>
-                        <div className="controls-grid">
-                          <select value={data.status} onChange={(e) => setItemField(area.name, item, "status", e.target.value)}>
-                            <option value="">Status</option>
-                            {STATUS_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                          </select>
-
-                          {isTempItem(item) ? (
-                            <select value={data.temperature} onChange={(e) => setItemField(area.name, item, "temperature", e.target.value)}>
-                              <option value="">Temp °F</option>
-                              {tempValues().map((t) => <option key={t} value={t}>{t}°F</option>)}
-                            </select>
-                          ) : (
-                            <select value={data.issue} disabled={!issueMode} onChange={(e) => setItemField(area.name, item, "issue", e.target.value)}>
-                              <option value="">Issue</option>
-                              {(ISSUE_OPTIONS[item] || []).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                          )}
-
-                          {isTempItem(item) ? (
-                            <select value={data.issue} disabled={!issueMode} onChange={(e) => setItemField(area.name, item, "issue", e.target.value)}>
-                              <option value="">Issue</option>
-                              {(ISSUE_OPTIONS[item] || []).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                          ) : (
-                            <select value={data.engineerAction} disabled={!issueMode} onChange={(e) => setItemField(area.name, item, "engineerAction", e.target.value)}>
-                              <option value="">Engineer Action</option>
-                              {ACTION_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                          )}
-
-                          {isTempItem(item) ? (
-                            <select value={data.engineerAction} disabled={!issueMode} onChange={(e) => setItemField(area.name, item, "engineerAction", e.target.value)}>
-                              <option value="">Engineer Action</option>
-                              {ACTION_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                            </select>
-                          ) : (
-                            <input className="full-row" placeholder="HOTSOS #" disabled={!issueMode || data.engineerAction !== "HOTSOS Logged"} value={data.hotsos} onChange={(e) => setItemField(area.name, item, "hotsos", e.target.value)} />
-                          )}
-
-                          {isTempItem(item) && (
-                            <input className="full-row" placeholder="HOTSOS #" disabled={!issueMode || data.engineerAction !== "HOTSOS Logged"} value={data.hotsos} onChange={(e) => setItemField(area.name, item, "hotsos", e.target.value)} />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  <div className="photos-block">
-                    <div className="small-label">Photos</div>
-                    <input type="file" accept="image/*" capture="environment" multiple onChange={(e) => addPhotos(area.name, e.target.files)} />
-                    <div className="photos-preview">
-                      {form.areas[area.name].photos.map((photo, i) => (
-                        <div key={i} className="thumb-wrap">
-                          <img src={photo} alt="" />
-                          <button type="button" className="remove-photo" onClick={() => removePhoto(area.name, i)}>X</button>
-                        </div>
-                      ))}
+              const notesBlock = area.notes
+                ? `
+                  <div style="margin-top:12px;">
+                    <div style="font-size:13px;font-weight:800;color:#374151;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;">
+                      Notes
+                    </div>
+                    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px;color:#374151;">
+                      ${area.notes}
                     </div>
                   </div>
+                `
+                : "";
 
-                  <textarea placeholder="Notes" value={form.areas[area.name].notes} onChange={(e) => setAreaNotes(area.name, e.target.value)} />
+              return `
+                <div style="border:1px solid #e5e7eb;background:#ffffff;border-radius:18px;padding:18px;margin-top:16px;">
+                  <div style="font-size:12px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;">
+                    ${area.floor}
+                  </div>
+                  <div style="font-size:20px;font-weight:800;color:#111827;margin-top:4px;">
+                    ${area.area}
+                  </div>
+                  ${issueList}
+                  ${tempTable}
+                  ${notesBlock}
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-      ))}
+              `;
+            })
+            .join("");
 
-      <div className="app-card">
-        <div className="summary-title">Email Report Preview</div>
-        <textarea className="report-box" value={emailReport} readOnly />
-        <button type="button" className="copy-button" onClick={copyReport}>Copy Report</button>
+    return `
+      <div style="font-family:Arial,Helvetica,sans-serif;background:#f3f4f6;padding:24px;color:#111827;">
+        <div style="max-width:860px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:22px;overflow:hidden;">
+          <div style="background:#eab308;color:#111827;padding:22px 24px;">
+            <div style="font-size:28px;font-weight:800;line-height:1.1;">Conference Center Health & Safety Walk</div>
+            <div style="margin-top:8px;font-size:14px;font-weight:600;">Inspection Report</div>
+          </div>
+
+          <div style="padding:24px;">
+            <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+              <tr>
+                <td style="padding:8px 0;font-weight:700;width:140px;">Inspector</td>
+                <td style="padding:8px 0;">${form.inspector || ""}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;font-weight:700;">Date</td>
+                <td style="padding:8px 0;">${form.date || ""}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 0;font-weight:700;">Time</td>
+                <td style="padding:8px 0;">${form.time || ""}</td>
+              </tr>
+            </table>
+
+            <div style="font-size:14px;font-weight:800;color:#374151;letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px;">
+              Floor Summary
+            </div>
+
+            <table style="width:100%;border-collapse:collapse;border-radius:14px;overflow:hidden;">
+              <thead>
+                <tr style="background:#f9fafb;">
+                  <th style="text-align:left;padding:10px 12px;border:1px solid #d1d5db;">Floor</th>
+                  <th style="text-align:left;padding:10px 12px;border:1px solid #d1d5db;">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${summaryRows}
+              </tbody>
+            </table>
+
+            ${areaBlocks}
+          </div>
+        </div>
       </div>
-    </div>
-  );
-}
+    `;
+  }, [form, reportData]);
+
+  const plainTextReport = useMemo(() => {
+    const lines = [];
+
+    lines.push("CONFERENCE CENTER HEALTH & SAFETY WALK");
+    lines.push("");
+    lines.push(`Inspector: ${form.inspector || ""}`);
+    lines.push(`Date: ${form.date || ""}`);
+    lines.push(`Time: ${form.time || ""}`);
+    lines.push("");
+    lines.push("FLOOR SUMMARY");
+
+    reportData.floorSummary.forEach((f) => {
+      lines.push(`- ${f.floor}: ${f.status}`);
+    });
+
+    lines.push("");
+    lines.push("AREAS REQUIRING ATTENTION");
+
+    if (reportData.flaggedAreas.length === 0) {
+      lines.push("- No issues noted");
+    } else {
+      reportData.flaggedAreas.forEach((area) => {
+        lines.push("");
+        lines.push(`${area.floor} - ${area.area}`);
+
+        area.issues.forEach((issue) => {
+          lines.push(`  • ${issue.item}: ${issue.issue}`);
+          if (issue.temp) lines.push(`    Temp: ${issue.temp}`);
+          if (issue.engineerAction) lines.push(`    Engineer Action: ${issue.engineerAction}`);
+          if (issue.hotsos) lines.push(`    HOTSOS #: ${issue.hotsos}`);
+        });
+
+        if (area.temps.length) {
+          lines.push("  Temperature Log:");
+          area.temps.forEach((t) => {
+            lines.push(`    - ${t.item}: ${t.temp}`);
+          });
+        }
+
+        if (area.notes) {
+          lines.push(`  Notes: ${area.notes}`);
+        }
+      });
+    }
+
+    return lines.join("\n");
+  }, [form, reportData]);
+
+  const copyReport = async () => {
+    await navigator.clipboard.writeText(plainTextReport);
+    alert("Report copied.");
+  };
+
+  const downloadHtmlReport = () => {
+    const blob = new Blob([htmlReport], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `cc-walk-report-${form.date || "report"}.html`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const openOutlookDraft = () => {
+    const subject = encodeURIComponent(`Conference Center Health & Safety Walk - ${form.date || ""}`);
+    const body = encodeURIComponent(plainTextReport);
+    window.open(`https://outlook.office.com/mail/deeplink/compose?subject=${subject}&body=${body}`, "_blank");
+  };
