@@ -471,7 +471,7 @@ const previewRight = [
   floorSummary.find((f) => f.floor === "G.G.A. Kitchen"),
 ].filter(Boolean).map((f) => (
   <div key={f.floor} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-3">
-    <span className="font-medium text-slate-800">{f.floor}</span>
+    <span className="font-medium text-slate-100">{f.floor}</span>
     <span className={`rounded-full px-2 py-1 text-xs font-bold ${f.issues === 0 ? "bg-green-100 text-green-700" : "bg-rose-100 text-rose-700"}`}>
       {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
     </span>
@@ -491,13 +491,13 @@ const previewRight = [
                 {group.areas.map((area) => (
                   <div key={area.name} style={{ marginBottom: 10 }}>
                     <button
-                      type="button"
-                      style={styles.pantryTile}
-                      onClick={() =>
-                        setOpenAreas((prev) => ({
-                          ...prev,
-                          [area.name]: !prev[area.name],
-                        }))
+  style={{
+    ...styles.pantryTile,
+    ...(openAreas[area.name] ? {
+      border: "1px solid #3b82f6",
+      boxShadow: "0 0 0 1px #3b82f6",
+    } : {})
+  }}
                       }
                     >
                       <span>{area.name}</span>
@@ -831,7 +831,7 @@ const previewRight = [
 
 const styles = {
   page: {
-    background: "#f1f5f9",
+    background: "#0b1220",
     minHeight: "100vh",
     padding: 12,
     fontFamily: "Arial, sans-serif",
@@ -841,8 +841,8 @@ const styles = {
     margin: "0 auto",
   },
   card: {
-    background: "#fff",
-    border: "1px solid #e2e8f0",
+    background: "#111827",
+    border: "1px solid #1f2937",
     borderRadius: 18,
     overflow: "hidden",
     marginBottom: 14,
@@ -906,7 +906,7 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     gap: 8,
-    border: "1px solid #e2e8f0",
+    border: "1px solid "#3b82f6",
     borderRadius: 12,
     padding: "12px 14px",
   },
@@ -948,42 +948,43 @@ const styles = {
     fontWeight: "bold",
   },
   pantryTile: {
-    width: "100%",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "14px 16px",
-    marginBottom: 10,
-    background: "#fef3c7",
-    border: "1px solid #fde68a",
-    borderRadius: 14,
-    fontWeight: 700,
-    fontSize: 18,
-    cursor: "pointer",
-    color: "#111827",
-  },
+  width: "100%",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  padding: "14px 16px",
+  marginBottom: 10,
+  background: "#1e293b",           
+  border: "1px solid #334155",     
+  borderRadius: 14,
+  fontWeight: 700,
+  fontSize: 18,
+  cursor: "pointer",
+  color: "#f8fafc",                
+},
   chevron: {
     color: "#64748b",
     fontSize: 13,
   },
   areaBody: {
-    background: "#fff",
-    border: "1px solid #e2e8f0",
-    borderRadius: 14,
-    padding: 12,
-    marginTop: -2,
-    marginBottom: 8,
-  },
+  background: "#111827",
+  border: "1px solid #1f2937",
+  borderRadius: 14,
+  padding: 12,
+  marginTop: -2,
+  marginBottom: 8,
+},
   itemCard: {
-    border: "1px solid #e2e8f0",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-  },
+  border: "1px solid #1f2937",
+  background: "#020617",
+  borderRadius: 12,
+  padding: 12,
+  marginBottom: 12,
+},
   itemTitle: {
     fontWeight: 700,
     marginBottom: 10,
-    color: "#111827",
+    color: "#f8fafc",
   },
   twoColGrid: {
     display: "grid",
@@ -1057,7 +1058,7 @@ const styles = {
   },
   goldBtn: {
     padding: "10px 14px",
-    background: "#eab308",
+    background: "#3b82f6",
     color: "#111827",
     border: "none",
     borderRadius: 10,
