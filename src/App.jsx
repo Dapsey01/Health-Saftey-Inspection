@@ -57,6 +57,10 @@ const STRUCTURE = [
   },
 ];
 
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 function isTempItem(item) {
   return item === "Reach-in Fridge" || item === "Walk-in Cooler";
 }
@@ -70,14 +74,9 @@ function isOutOfRange(value) {
 function tempValues() {
   const values = [];
   for (let v = 29; v <= 60; v += 0.5) {
-    const clean = Number.isInteger(v) ? v : Number(v.toFixed(1));
-    values.push(clean);
+    values.push(Number.isInteger(v) ? v : Number(v.toFixed(1)));
   }
   return values;
-}
-
-function clone(obj) {
-  return JSON.parse(JSON.stringify(obj));
 }
 
 function escapeHtml(value) {
@@ -129,9 +128,17 @@ export default function App() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const setAreaNotes = (areaName, value) => {
+    setForm((prev) => {
+      const next = deepClone(prev);
+      next.areas[areaName].notes = value;
+      return next;
+    });
+  };
+
   const setItemField = (areaName, itemName, field, value) => {
     setForm((prev) => {
-      const next = clone(prev);
+      const next = deepClone(prev);
       const item = next.areas[areaName].items[itemName];
 
       item[field] = value;
@@ -159,14 +166,6 @@ export default function App() {
     });
   };
 
-  const setAreaNotes = (areaName, value) => {
-    setForm((prev) => {
-      const next = clone(prev);
-      next.areas[areaName].notes = value;
-      return next;
-    });
-  };
-
   const addIssuePhotos = (areaName, itemName, files) => {
     if (!files || !files.length) return;
 
@@ -181,7 +180,7 @@ export default function App() {
 
     Promise.all(readers).then((images) => {
       setForm((prev) => {
-        const next = clone(prev);
+        const next = deepClone(prev);
         next.areas[areaName].items[itemName].photos.push(...images);
         return next;
       });
@@ -190,7 +189,7 @@ export default function App() {
 
   const removeIssuePhoto = (areaName, itemName, index) => {
     setForm((prev) => {
-      const next = clone(prev);
+      const next = deepClone(prev);
       next.areas[areaName].items[itemName].photos.splice(index, 1);
       return next;
     });
@@ -269,16 +268,28 @@ export default function App() {
     0
   );
 
+  const previewLeft = [
+    floorSummary.find((f) => f.floor === "1st Floor"),
+    floorSummary.find((f) => f.floor === "2nd Floor"),
+    floorSummary.find((f) => f.floor === "3rd Floor"),
+  ].filter(Boolean);
+
+  const previewRight = [
+    floorSummary.find((f) => f.floor === "Marquee"),
+    floorSummary.find((f) => f.floor === "Signature Tower"),
+    floorSummary.find((f) => f.floor === "G.G.A. Kitchen"),
+  ].filter(Boolean);
+
   const htmlEmail = useMemo(() => {
     const floorSummaryHtml = `
-      <div style="margin:16px 0;border:1px solid #e2e8f0;border-radius:18px;background:#ffffff;padding:16px;">
-        <div style="font-weight:700;font-size:16px;color:#0f172a;margin-bottom:10px;">Floor Summary</div>
+      <div style="margin:16px 0;border:1px solid #334155;border-radius:18px;background:#1e293b;padding:16px;">
+        <div style="font-weight:700;font-size:16px;color:#ffffff;margin-bottom:10px;">Floor Summary</div>
         ${floorSummary
           .map(
             (f) => `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-top:1px solid #e2e8f0;">
-              <div style="font-size:14px;color:#0f172a;">${escapeHtml(f.floor)}</div>
-              <div style="font-size:13px;font-weight:700;color:${f.issues === 0 ? "#16a34a" : "#dc2626"};">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-top:1px solid #334155;">
+              <div style="font-size:14px;color:#ffffff;">${escapeHtml(f.floor)}</div>
+              <div style="font-size:13px;font-weight:700;color:${f.issues === 0 ? "#86efac" : "#f87171"};">
                 ${f.issues === 0 ? "Clear" : `${f.issues} Issues`}
               </div>
             </div>`
@@ -289,7 +300,7 @@ export default function App() {
 
     const floorBlocks = detailedReport
       .map((group) => {
-        const headerBg = group.building === "Separate" ? "#ddd6fe" : "#334155";
+        const headerBg = group.building === "Separate" ? "#6d28d9" : "#1e3a8a";
 
         const areaHtml = group.areas
           .map((area) => {
@@ -299,26 +310,26 @@ export default function App() {
               .map(
                 (issue) => `
                 <tr>
-                  <td style="padding:12px;border:1px solid #fecdd3;background:#ffffff;border-radius:12px;">
+                  <td style="padding:12px;border:1px solid #7f1d1d;background:#111827;border-radius:12px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
                       <tr>
                         <td valign="top" style="padding-right:12px;">
-                          <div style="font-weight:700;color:#0f172a;font-size:15px;">${escapeHtml(issue.itemName)}</div>
-                          <div style="margin-top:4px;color:#334155;font-size:14px;line-height:1.4;">${escapeHtml(issue.issue || "Issue logged")}</div>
+                          <div style="font-weight:700;color:#ffffff;font-size:15px;">${escapeHtml(issue.itemName)}</div>
+                          <div style="margin-top:4px;color:#cbd5e1;font-size:14px;line-height:1.4;">${escapeHtml(issue.issue || "Issue logged")}</div>
                           <div style="margin-top:8px;">
                             ${
                               issue.temperature
-                                ? `<span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">Temp ${escapeHtml(issue.temperature)}°F</span>`
+                                ? `<span style="display:inline-block;background:#78350f;color:#fde68a;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">Temp ${escapeHtml(issue.temperature)}°F</span>`
                                 : ""
                             }
                             ${
                               issue.engineerAction && issue.engineerAction !== "No Action"
-                                ? `<span style="display:inline-block;background:#e2e8f0;color:#334155;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">${escapeHtml(issue.engineerAction)}</span>`
+                                ? `<span style="display:inline-block;background:#334155;color:#e2e8f0;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">${escapeHtml(issue.engineerAction)}</span>`
                                 : ""
                             }
                             ${
                               issue.hotsos
-                                ? `<span style="display:inline-block;background:#ffe4e6;color:#be123c;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">HOTSOS #${escapeHtml(issue.hotsos)}</span>`
+                                ? `<span style="display:inline-block;background:#7f1d1d;color:#fecaca;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">HOTSOS #${escapeHtml(issue.hotsos)}</span>`
                                 : ""
                             }
                           </div>
@@ -326,8 +337,8 @@ export default function App() {
                         <td valign="top" width="110">
                           ${
                             issue.photos && issue.photos[0]
-                              ? `<img src="${issue.photos[0]}" alt="Issue photo" width="110" style="display:block;width:110px;height:96px;object-fit:cover;border-radius:12px;border:1px solid #e2e8f0;" />`
-                              : `<div style="width:110px;height:96px;border-radius:12px;border:1px dashed #cbd5e1;color:#94a3b8;font-size:12px;text-align:center;line-height:96px;">No Photo</div>`
+                              ? `<img src="${issue.photos[0]}" alt="Issue photo" width="110" style="display:block;width:110px;height:96px;object-fit:cover;border-radius:12px;border:1px solid #334155;" />`
+                              : `<div style="width:110px;height:96px;border-radius:12px;border:1px dashed #475569;color:#94a3b8;font-size:12px;text-align:center;line-height:96px;">No Photo</div>`
                           }
                         </td>
                       </tr>
@@ -341,17 +352,17 @@ export default function App() {
 
             const tempsHtml = area.temps.length
               ? `
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:12px;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:12px;border:1px solid #334155;border-radius:12px;overflow:hidden;background:#111827;">
                   <tr>
-                    <td style="background:#f8fafc;color:#475569;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;border-bottom:1px solid #e2e8f0;">Temperature Log</td>
-                    <td style="background:#f8fafc;color:#475569;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;border-bottom:1px solid #e2e8f0;">Reading</td>
+                    <td style="background:#0f172a;color:#cbd5e1;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;border-bottom:1px solid #334155;">Temperature Log</td>
+                    <td style="background:#0f172a;color:#cbd5e1;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;border-bottom:1px solid #334155;">Reading</td>
                   </tr>
                   ${area.temps
                     .map(
                       (temp) => `
                       <tr>
-                        <td style="padding:10px 12px;border-top:1px solid #e2e8f0;color:#0f172a;font-size:14px;">${escapeHtml(temp.itemName)}</td>
-                        <td style="padding:10px 12px;border-top:1px solid #e2e8f0;color:#0f172a;font-size:14px;font-weight:700;">${escapeHtml(temp.temperature)}°F</td>
+                        <td style="padding:10px 12px;border-top:1px solid #334155;color:#f8fafc;font-size:14px;">${escapeHtml(temp.itemName)}</td>
+                        <td style="padding:10px 12px;border-top:1px solid #334155;color:#f8fafc;font-size:14px;font-weight:700;">${escapeHtml(temp.temperature)}°F</td>
                       </tr>`
                     )
                     .join("")}
@@ -359,13 +370,13 @@ export default function App() {
               : "";
 
             const notesHtml = area.notes
-              ? `<div style="margin-top:12px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;padding:12px;"><div style="font-weight:700;color:#ffffff;font-size:14px;margin-bottom:6px;">Notes</div><div style="color:#334155;font-size:14px;line-height:1.5;">${escapeHtml(area.notes)}</div></div>`
+              ? `<div style="margin-top:12px;border:1px solid #334155;border-radius:12px;background:#111827;padding:12px;"><div style="font-weight:700;color:#ffffff;font-size:14px;margin-bottom:6px;">Notes</div><div style="color:#cbd5e1;font-size:14px;line-height:1.5;">${escapeHtml(area.notes)}</div></div>`
               : "";
 
             return `
-              <div style="margin-top:12px;border:1px solid #e2e8f0;border-radius:16px;background:#f8fafc;padding:16px;">
-                <div style="font-weight:700;font-size:18px;color:#0f172a;margin-bottom:8px;">${escapeHtml(area.name)}</div>
-                ${!hasContent ? `<div style="font-size:14px;color:#64748b;">No issues noted.</div>` : ""}
+              <div style="margin-top:12px;border:1px solid #334155;border-radius:16px;background:#1e293b;padding:16px;">
+                <div style="font-weight:700;font-size:18px;color:#ffffff;margin-bottom:8px;">${escapeHtml(area.name)}</div>
+                ${!hasContent ? `<div style="font-size:14px;color:#cbd5e1;">No issues noted.</div>` : ""}
                 ${issuesHtml ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${issuesHtml}</table>` : ""}
                 ${tempsHtml}
                 ${notesHtml}
@@ -373,11 +384,11 @@ export default function App() {
           })
           .join("");
 
-        return `<div style="margin-top:18px;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;background:#ffffff;"><div style="background:${headerBg};color:#0f172a;font-weight:700;font-size:18px;padding:14px 18px;">${escapeHtml(group.floor)}</div><div style="padding:16px;">${areaHtml}</div></div>`;
+        return `<div style="margin-top:18px;border:1px solid #334155;border-radius:18px;overflow:hidden;background:#334155;"><div style="background:${headerBg};color:#ffffff;font-weight:700;font-size:18px;padding:14px 18px;">${escapeHtml(group.floor)}</div><div style="padding:16px;">${areaHtml}</div></div>`;
       })
       .join("");
 
-    return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f1f5f9;"><tr><td align="center" style="padding:24px 12px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:860px;border-collapse:collapse;"><tr><td style="background:#ffffff;border:1px solid #e2e8f0;border-radius:22px;overflow:hidden;"><div style="background:#eab308;color:#0f172a;font-size:26px;font-weight:700;padding:22px 24px;">Conference Center Health &amp; Safety Walk Report</div><div style="padding:18px 24px;background:#ffffff;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr><td style="font-size:14px;color:#334155;padding:0 12px 0 0;"><strong>Inspector:</strong> ${escapeHtml(form.inspector || "—")}</td><td style="font-size:14px;color:#334155;padding:0 12px;"><strong>Date:</strong> ${escapeHtml(form.date || "—")}</td><td style="font-size:14px;color:#334155;padding:0 0 0 12px;"><strong>Time:</strong> ${escapeHtml(form.time || "—")}</td></tr></table></div></td></tr><tr><td height="16"></td></tr><tr><td><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:12px 0; margin:0 -12px;"><tr><td width="33.33%" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:18px;vertical-align:top;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;">Areas Reviewed</div><div style="margin-top:10px;font-size:32px;font-weight:700;color:#0f172a;">${STRUCTURE.reduce((sum, g) => sum + g.areas.length, 0)}</div></td><td width="33.33%" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:18px;vertical-align:top;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;">Issues Logged</div><div style="margin-top:10px;font-size:32px;font-weight:700;color:#e11d48;">${issueCount}</div></td><td width="33.33%" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:18px;vertical-align:top;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;">Engineering Follow Up</div><div style="margin-top:10px;font-size:14px;font-weight:700;color:#0f172a;">Calls: ${callCount}<br/>HOTSOS: ${hotsosCount}</div></td></tr></table></td></tr><tr><td height="16"></td></tr><tr><td>${floorSummaryHtml}${floorBlocks}</td></tr></table></td></tr></table></body></html>`;
+    return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#020617;font-family:Arial,Helvetica,sans-serif;color:#f8fafc;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#020617;"><tr><td align="center" style="padding:24px 12px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:860px;border-collapse:collapse;"><tr><td style="background:#334155;border:1px solid #1f2937;border-radius:22px;overflow:hidden;"><div style="background:#1e3a8a;color:#ffffff;font-size:26px;font-weight:700;padding:22px 24px;border-bottom:1px solid #3b82f6;">Conference Center Health &amp; Safety Walk Report</div><div style="padding:18px 24px;background:#334155;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr><td style="font-size:14px;color:#e2e8f0;padding:0 12px 0 0;"><strong>Inspector:</strong> ${escapeHtml(form.inspector || "—")}</td><td style="font-size:14px;color:#e2e8f0;padding:0 12px;"><strong>Date:</strong> ${escapeHtml(form.date || "—")}</td><td style="font-size:14px;color:#e2e8f0;padding:0 0 0 12px;"><strong>Time:</strong> ${escapeHtml(form.time || "—")}</td></tr></table></div></td></tr><tr><td height="16"></td></tr><tr><td><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:12px 0; margin:0 -12px;"><tr><td width="33.33%" style="background:#334155;border:1px solid #1f2937;border-radius:18px;padding:18px;vertical-align:top;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#cbd5e1;">Areas Reviewed</div><div style="margin-top:10px;font-size:32px;font-weight:700;color:#ffffff;">${STRUCTURE.reduce((sum, g) => sum + g.areas.length, 0)}</div></td><td width="33.33%" style="background:#334155;border:1px solid #1f2937;border-radius:18px;padding:18px;vertical-align:top;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#cbd5e1;">Issues Logged</div><div style="margin-top:10px;font-size:32px;font-weight:700;color:#f87171;">${issueCount}</div></td><td width="33.33%" style="background:#334155;border:1px solid #1f2937;border-radius:18px;padding:18px;vertical-align:top;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#cbd5e1;">Engineering Follow Up</div><div style="margin-top:10px;font-size:14px;font-weight:700;color:#ffffff;">Calls: ${callCount}<br/>HOTSOS: ${hotsosCount}</div></td></tr></table></td></tr><tr><td height="16"></td></tr><tr><td>${floorSummaryHtml}${floorBlocks}</td></tr></table></td></tr></table></body></html>`;
   }, [detailedReport, floorSummary, form.date, form.inspector, form.time, issueCount, callCount, hotsosCount]);
 
   const copyHtmlEmail = async () => {
@@ -406,8 +417,8 @@ export default function App() {
     const body = encodeURIComponent(
       "Your formatted report is copied. Paste it into the body of this Outlook message for best results."
     );
-    const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?subject=${subject}&body=${body}`;
-    window.open(outlookUrl, "_blank");
+    const url = `https://outlook.office.com/mail/deeplink/compose?subject=${subject}&body=${body}`;
+    window.open(url, "_blank");
   };
 
   const downloadHtmlEmail = () => {
@@ -419,18 +430,6 @@ export default function App() {
     link.click();
     URL.revokeObjectURL(url);
   };
-
-  const previewLeft = [
-  floorSummary.find((f) => f.floor === "1st Floor"),
-  floorSummary.find((f) => f.floor === "2nd Floor"),
-  floorSummary.find((f) => f.floor === "3rd Floor"),
-].filter(Boolean);
-
-const previewRight = [
-  floorSummary.find((f) => f.floor === "Marquee"),
-  floorSummary.find((f) => f.floor === "Signature Tower"),
-  floorSummary.find((f) => f.floor === "G.G.A. Kitchen"),
-].filter(Boolean);
 
   return (
     <div style={styles.page}>
@@ -459,71 +458,65 @@ const previewRight = [
           </div>
         </div>
 
-       <div style={styles.card}>
-  <div style={styles.sectionTitle}>Floor Summary</div>
+        <div style={styles.card}>
+          <div style={styles.sectionTitle}>Floor Summary</div>
+          <div style={styles.previewSummaryGrid}>
+            <div style={styles.previewSummaryCol}>
+              {previewLeft.map((f) => (
+                <div key={`top-left-${f.floor}`} style={styles.previewSummaryRow}>
+                  <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
+                  <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
+                    {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
+                  </div>
+                </div>
+              ))}
+            </div>
 
-  <div style={styles.previewSummaryGrid}>
-    <div style={styles.previewSummaryCol}>
-      {[
-        floorSummary.find((f) => f.floor === "1st Floor"),
-        floorSummary.find((f) => f.floor === "2nd Floor"),
-        floorSummary.find((f) => f.floor === "3rd Floor"),
-      ].filter(Boolean).map((f) => (
-        <div key={`top-left-${f.floor}`} style={styles.previewSummaryRow}>
-          <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
-          <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
-            {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
+            <div style={styles.previewSummaryCol}>
+              {previewRight.map((f) => (
+                <div key={`top-right-${f.floor}`} style={styles.previewSummaryRow}>
+                  <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
+                  <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
+                    {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      ))}
-    </div>
 
-   <div style={styles.previewSummaryCol}>
-  {[
-    floorSummary.find((f) => f.floor === "Marquee"),
-    floorSummary.find((f) => f.floor === "Signature Tower"),
-    floorSummary.find((f) => f.floor === "G.G.A. Kitchen"),
-  ]
-    .filter(Boolean)
-    .map((f) => (
-      <div key={`top-right-${f.floor}`} style={styles.previewSummaryRow}>
-        <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
-        <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
-          {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
-        </div>
-      </div>
-    ))}
-</div>
-        </div>
         <div style={styles.mainStack}>
           <div>
             {STRUCTURE.map((group) => (
               <div key={group.floor} style={{ marginBottom: 16 }}>
-               <div style={group.building === "Separate" ? styles.floorHeaderPurple : styles.floorHeaderGold}>
-  {group.floor}
-</div>
+                <div
+                  style={
+                    group.building === "Separate"
+                      ? styles.floorHeaderPurple
+                      : styles.floorHeaderBlue
+                  }
+                >
+                  {group.floor}
+                </div>
 
                 {group.areas.map((area) => (
                   <div key={area.name} style={{ marginBottom: 10 }}>
-                   <button
-  onClick={() =>
-    setOpenAreas((prev) => ({
-      ...prev,
-      [area.name]: !prev[area.name],
-    }))
-  }
-  style={{
-    ...styles.pantryTile,
-    background: "#1e293b",
-    color: "#f8fafc",
-    border: "1px solid #334155",
-    ...(openAreas[area.name]
-      ? {
-          border: "1px solid #3b82f6",
-          boxShadow: "0 0 0 1px #3b82f6",
-        }
-      : {}),
-}}
+                    <button
+                      onClick={() =>
+                        setOpenAreas((prev) => ({
+                          ...prev,
+                          [area.name]: !prev[area.name],
+                        }))
+                      }
+                      style={{
+                        ...styles.pantryTile,
+                        border: openAreas[area.name]
+                          ? "1px solid #3b82f6"
+                          : styles.pantryTile.border,
+                        boxShadow: openAreas[area.name]
+                          ? "0 0 0 1px #3b82f6"
+                          : "none",
+                      }}
                     >
                       <span>{area.name}</span>
                       <span style={styles.chevron}>{openAreas[area.name] ? "▲" : "▼"}</span>
@@ -680,6 +673,10 @@ const previewRight = [
                                   </div>
                                 </div>
                               )}
+
+                              {isTempItem(item) && isOutOfRange(data.temperature) && (
+                                <div style={styles.outOfRangeNote}>Out of range</div>
+                              )}
                             </div>
                           );
                         })}
@@ -731,7 +728,7 @@ const previewRight = [
                 </div>
                 <div style={styles.statCard}>
                   <div style={styles.statLabel}>Issues Logged</div>
-                  <div style={{ ...styles.statNumber, color: "#e11d48" }}>{issueCount}</div>
+                  <div style={{ ...styles.statNumber, color: "#f87171" }}>{issueCount}</div>
                 </div>
                 <div style={styles.statCard}>
                   <div style={styles.statLabel}>Engineering Follow Up</div>
@@ -744,18 +741,19 @@ const previewRight = [
                 <div style={styles.previewSummaryGrid}>
                   <div style={styles.previewSummaryCol}>
                     {previewLeft.map((f) => (
-                      <div key={`left-${f.floor}`} style={styles.previewSummaryRow}>
-                        <div>{f.floor}</div>
+                      <div key={`email-left-${f.floor}`} style={styles.previewSummaryRow}>
+                        <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
                         <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
                           {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
                         </div>
                       </div>
                     ))}
                   </div>
+
                   <div style={styles.previewSummaryCol}>
                     {previewRight.map((f) => (
-                      <div key={`right-${f.floor}`} style={styles.previewSummaryRow}>
-                        <div>{f.floor}</div>
+                      <div key={`email-right-${f.floor}`} style={styles.previewSummaryRow}>
+                        <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
                         <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
                           {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
                         </div>
@@ -770,8 +768,7 @@ const previewRight = [
                   <div
                     style={{
                       ...styles.previewGroupHeader,
-                      background: group.building === "Separate" ? "#ddd6fe" : "#334155",
-                      color: group.building === "Separate" ? "#0f172a" : "#ffffff",
+                      background: group.building === "Separate" ? "#6d28d9" : "#1e3a8a",
                     }}
                   >
                     {group.floor}
@@ -792,8 +789,8 @@ const previewRight = [
                               {area.issues.map((issue, idx) => (
                                 <div key={`${area.name}-${issue.itemName}-${idx}`} style={styles.previewIssueCard}>
                                   <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 700 }}>{issue.itemName}</div>
-                                    <div style={{ marginTop: 4, color: "#475569", fontSize: 14 }}>
+                                    <div style={{ fontWeight: 700, color: "#ffffff" }}>{issue.itemName}</div>
+                                    <div style={{ marginTop: 4, color: "#cbd5e1", fontSize: 14 }}>
                                       {issue.issue || "Issue logged"}
                                     </div>
                                     <div style={styles.issueBadges}>
@@ -849,8 +846,6 @@ const previewRight = [
             </div>
           </div>
         </div>
-                </div>
-        </div>
       </div>
     </div>
   );
@@ -874,15 +869,15 @@ const styles = {
     overflow: "hidden",
     marginBottom: 14,
   },
- topHeader: {
-  background: "#1e3a8a",
-  color: "#ffffff",
-  fontWeight: "bold",
-  fontSize: 22,
-  padding: "16px 18px",
-  borderBottom: "1px solid #3b82f6",
-  boxShadow: "0 0 10px rgba(59,130,246,0.3)",
-},
+  topHeader: {
+    background: "#1e3a8a",
+    color: "#ffffff",
+    fontWeight: "bold",
+    fontSize: 22,
+    padding: "16px 18px",
+    borderBottom: "1px solid #3b82f6",
+    boxShadow: "0 0 10px rgba(59,130,246,0.3)",
+  },
   topFields: {
     display: "grid",
     gap: 10,
@@ -895,122 +890,97 @@ const styles = {
     border: "1px solid #cbd5e1",
     fontSize: 16,
     boxSizing: "border-box",
+    background: "#f8fafc",
+    color: "#0f172a",
   },
   textarea: {
     width: "100%",
     minHeight: 95,
     padding: 12,
     borderRadius: 10,
-    border: "1px solid #cbd5e1",
+    border: "1px solid #334155",
     fontSize: 15,
     boxSizing: "border-box",
+    background: "#0f172a",
+    color: "#f8fafc",
   },
   select: {
     width: "100%",
     padding: 12,
     borderRadius: 10,
-    border: "1px solid #cbd5e1",
+    border: "1px solid #334155",
     fontSize: 15,
     boxSizing: "border-box",
-    background: "#fff",
+    background: "#0f172a",
+    color: "#f8fafc",
   },
   tempAlert: {
     border: "1px solid #ef4444",
-    background: "#fef2f2",
+    background: "#450a0a",
+    color: "#fecaca",
   },
   sectionTitle: {
     fontWeight: "bold",
     fontSize: 19,
     padding: "14px 16px 8px",
-    color: "#f8fafc",
-  },
-  summaryGridTop: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: 10,
-    padding: "0 14px 14px",
-  },
-  summaryTopRow: {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: 8,
-  border: "1px solid #334155",
-  borderRadius: 12,
-  padding: "12px 14px",
-  color: "#f8fafc",
-},
-  clearBadge: {
-    background: "#dcfce7",
-    color: "#166534",
-    borderRadius: 999,
-    padding: "4px 8px",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  issueBadge: {
-    background: "#ffe4e6",
-    color: "#be123c",
-    borderRadius: 999,
-    padding: "4px 8px",
-    fontSize: 12,
-    fontWeight: "bold",
+    color: "#ffffff",
   },
   mainStack: {
     display: "grid",
     gridTemplateColumns: "1fr",
     gap: 16,
   },
-  floorHeaderGold: {
-  background: "#1e3a8a",
-  color: "#ffffff",
-  fontWeight: "bold",
-  padding: "10px 14px",
-  borderRadius: 10,
-  marginBottom: 8,
-},
+  floorHeaderBlue: {
+    marginBottom: 8,
+    padding: "12px 14px",
+    background: "#1e3a8a",
+    color: "#ffffff",
+    borderRadius: 10,
+    fontWeight: "bold",
+    boxShadow: "0 0 10px rgba(59,130,246,0.3)",
+  },
   floorHeaderPurple: {
     marginBottom: 8,
     padding: "12px 14px",
-    background: "#ddd6fe",
-    color: "#111827",
+    background: "#6d28d9",
+    color: "#ffffff",
     borderRadius: 10,
     fontWeight: "bold",
   },
   pantryTile: {
-  width: "100%",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  padding: "14px 16px",
-  marginBottom: 10,
-  background: "#3f4f68",           
-  border: "1px solid #334155",     
-  borderRadius: 14,
-  fontWeight: 700,
-  fontSize: 18,
-  cursor: "pointer",
-  color: "#f8fafc",                
-},
+    width: "100%",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "14px 16px",
+    marginBottom: 10,
+    background: "#3f4f68",
+    border: "1px solid #334155",
+    borderRadius: 14,
+    fontWeight: 700,
+    fontSize: 18,
+    cursor: "pointer",
+    color: "#f8fafc",
+  },
   chevron: {
-    color: "#64748b",
+    color: "#93c5fd",
     fontSize: 13,
   },
   areaBody: {
-  background: "#111827",
-  border: "1px solid #1f2937",
-  borderRadius: 14,
-  padding: 12,
-  marginTop: -2,
-  marginBottom: 8,
-},
+    background: "#111827",
+    border: "1px solid #1f2937",
+    borderRadius: 14,
+    padding: 12,
+    marginTop: -2,
+    marginBottom: 8,
+  },
   itemCard: {
-  border: "1px solid #1f2937",
-  background: "#020617",
-  borderRadius: 12,
-  padding: 12,
-  marginBottom: 12,
-},
+    border: "1px solid #1f2937",
+    background: "#020617",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
   itemTitle: {
     fontWeight: 700,
     marginBottom: 10,
@@ -1024,7 +994,7 @@ const styles = {
   smallLabel: {
     fontSize: 13,
     fontWeight: 600,
-    color: "#475569",
+    color: "#cbd5e1",
     marginBottom: 6,
   },
   photoRow: {
@@ -1038,7 +1008,7 @@ const styles = {
     height: 64,
     objectFit: "cover",
     borderRadius: 10,
-    border: "1px solid #cbd5e1",
+    border: "1px solid #334155",
   },
   thumbDelete: {
     position: "absolute",
@@ -1053,6 +1023,16 @@ const styles = {
     fontWeight: "bold",
     cursor: "pointer",
   },
+  outOfRangeNote: {
+    marginTop: 10,
+    display: "inline-block",
+    padding: "6px 10px",
+    borderRadius: 999,
+    background: "#7f1d1d",
+    color: "#fecaca",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
   reportHeader: {
     background: "#0f172a",
     color: "#fff",
@@ -1066,7 +1046,7 @@ const styles = {
     gap: 8,
     alignItems: "center",
     padding: "12px 14px",
-    borderBottom: "1px solid #e2e8f0",
+    borderBottom: "1px solid #1f2937",
   },
   darkBtn: {
     padding: "10px 14px",
@@ -1079,18 +1059,18 @@ const styles = {
   },
   lightBtn: {
     padding: "10px 14px",
-    background: "#fff",
-    color: "#111827",
-    border: "1px solid #cbd5e1",
+    background: "#1e293b",
+    color: "#ffffff",
+    border: "1px solid #334155",
     borderRadius: 10,
     cursor: "pointer",
     fontWeight: 700,
   },
   goldBtn: {
     padding: "10px 14px",
-    background: "#3b82f6",
-    color: "#111827",
-    border: "none",
+    background: "#1e3a8a",
+    color: "#ffffff",
+    border: "1px solid #3b82f6",
     borderRadius: 10,
     cursor: "pointer",
     fontWeight: 700,
@@ -1098,17 +1078,17 @@ const styles = {
   copyMessage: {
     fontSize: 14,
     fontWeight: 600,
-    color: "#475569",
+    color: "#cbd5e1",
   },
   previewScroll: {
     padding: 14,
     maxHeight: "80vh",
     overflow: "auto",
-    background: "#fff",
+    background: "#334155",
   },
   previewIntroCard: {
-    border: "1px solid #e2e8f0",
-    background: "#f8fafc",
+    border: "1px solid #1f2937",
+    background: "#1e293b",
     borderRadius: 18,
     padding: 16,
     marginBottom: 14,
@@ -1116,13 +1096,13 @@ const styles = {
   previewTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#0f172a",
+    color: "#ffffff",
   },
   previewMetaGrid: {
     display: "grid",
     gap: 8,
     marginTop: 10,
-    color: "#334155",
+    color: "#e2e8f0",
   },
   statsGrid: {
     display: "grid",
@@ -1131,84 +1111,84 @@ const styles = {
     marginBottom: 14,
   },
   statCard: {
-    border: "1px solid #e2e8f0",
+    border: "1px solid #1f2937",
     borderRadius: 18,
     padding: 16,
-    background: "#fff",
+    background: "#1e293b",
   },
   statLabel: {
     fontSize: 11,
     fontWeight: "bold",
     letterSpacing: ".06em",
     textTransform: "uppercase",
-    color: "#64748b",
+    color: "#cbd5e1",
   },
   statNumber: {
     marginTop: 8,
     fontSize: 34,
     fontWeight: "bold",
-    color: "#0f172a",
+    color: "#ffffff",
   },
   statSmall: {
     marginTop: 8,
     fontSize: 14,
     fontWeight: 700,
-    color: "#0f172a",
+    color: "#ffffff",
   },
   previewSummaryCard: {
     overflow: "hidden",
     borderRadius: 18,
-    border: "1px solid #e2e8f0",
-    background: "#fff",
+    border: "1px solid #1f2937",
+    background: "#334155",
     marginBottom: 14,
   },
   previewSummaryHeader: {
     padding: "14px 16px",
     fontWeight: "bold",
-    background: "#f1f5f9",
-    color: "#0f172a",
+    background: "#0f172a",
+    color: "#ffffff",
   },
   previewSummaryGrid: {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: 10,
-  padding: 14,
-},
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10,
+    padding: 14,
+  },
   previewSummaryCol: {
-  display: "grid",
-  gap: 10,
-},
+    display: "grid",
+    gap: 10,
+  },
   previewSummaryRow: {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  gap: 8,
-  border: "1px solid #334155",
-  borderRadius: 12,
-  padding: "12px 14px",
-  background: "#1e293b",
-},
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+    border: "1px solid #334155",
+    borderRadius: 12,
+    padding: "12px 14px",
+    background: "#1e293b",
+  },
   previewClear: {
-  color: "#86efac",
-  fontWeight: "bold",
-  fontSize: 13,
-},
+    color: "#86efac",
+    fontWeight: "bold",
+    fontSize: 13,
+  },
   previewIssue: {
-  color: "#f87171",
-  fontWeight: "bold",
-  fontSize: 13,
-},
+    color: "#f87171",
+    fontWeight: "bold",
+    fontSize: 13,
+  },
   previewGroupCard: {
     overflow: "hidden",
     borderRadius: 18,
-    border: "1px solid #e2e8f0",
-    background: "#fff",
+    border: "1px solid #1f2937",
+    background: "#334155",
     marginBottom: 14,
   },
   previewGroupHeader: {
     padding: "14px 16px",
     fontWeight: "bold",
-    color: "#0f172a",
+    color: "#ffffff",
   },
   previewGroupBody: {
     padding: 14,
@@ -1216,28 +1196,28 @@ const styles = {
     gap: 12,
   },
   previewAreaCard: {
-    border: "1px solid #e2e8f0",
+    border: "1px solid #1f2937",
     borderRadius: 16,
-    background: "#f8fafc",
+    background: "#1e293b",
     padding: 14,
   },
   previewAreaTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#0f172a",
+    color: "#ffffff",
     marginBottom: 8,
   },
   noIssuesText: {
     fontSize: 14,
-    color: "#64748b",
+    color: "#cbd5e1",
   },
   previewIssueCard: {
     display: "grid",
     gridTemplateColumns: "1fr 110px",
     gap: 12,
-    border: "1px solid #fecdd3",
+    border: "1px solid #7f1d1d",
     borderRadius: 14,
-    background: "#fff",
+    background: "#111827",
     padding: 12,
     marginBottom: 10,
   },
@@ -1248,24 +1228,24 @@ const styles = {
     marginTop: 8,
   },
   tempBadge: {
-    background: "#fef3c7",
-    color: "#92400e",
+    background: "#78350f",
+    color: "#fde68a",
     fontSize: 12,
     fontWeight: "bold",
     borderRadius: 999,
     padding: "4px 8px",
   },
   grayBadge: {
-    background: "#e2e8f0",
-    color: "#334155",
+    background: "#334155",
+    color: "#e2e8f0",
     fontSize: 12,
     fontWeight: "bold",
     borderRadius: 999,
     padding: "4px 8px",
   },
   redBadge: {
-    background: "#ffe4e6",
-    color: "#be123c",
+    background: "#7f1d1d",
+    color: "#fecaca",
     fontSize: 12,
     fontWeight: "bold",
     borderRadius: 999,
@@ -1276,13 +1256,13 @@ const styles = {
     height: 96,
     objectFit: "cover",
     borderRadius: 12,
-    border: "1px solid #e2e8f0",
+    border: "1px solid #334155",
   },
   noPhotoBox: {
     width: 110,
     height: 96,
     borderRadius: 12,
-    border: "1px dashed #cbd5e1",
+    border: "1px dashed #475569",
     color: "#94a3b8",
     fontSize: 12,
     display: "flex",
@@ -1292,34 +1272,35 @@ const styles = {
   tempTableWrap: {
     marginTop: 14,
     overflow: "hidden",
-    border: "1px solid #e2e8f0",
+    border: "1px solid #334155",
     borderRadius: 12,
-    background: "#fff",
+    background: "#111827",
   },
   tempTableHeaderRow: {
     display: "grid",
     gridTemplateColumns: "1.5fr 1fr",
-    background: "#f1f5f9",
+    background: "#0f172a",
     padding: "10px 12px",
     fontSize: 12,
     fontWeight: "bold",
     textTransform: "uppercase",
-    color: "#475569",
+    color: "#cbd5e1",
   },
   tempTableRow: {
     display: "grid",
     gridTemplateColumns: "1.5fr 1fr",
     padding: "10px 12px",
-    borderTop: "1px solid #e2e8f0",
+    borderTop: "1px solid #334155",
     fontSize: 14,
+    color: "#f8fafc",
   },
   notesBox: {
     marginTop: 14,
-    border: "1px solid #e2e8f0",
+    border: "1px solid #334155",
     borderRadius: 12,
-    background: "#fff",
+    background: "#111827",
     padding: 12,
     fontSize: 14,
-    color: "#334155",
+    color: "#cbd5e1",
   },
 };
