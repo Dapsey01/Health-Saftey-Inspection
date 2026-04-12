@@ -916,7 +916,7 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     gap: 8,
-    border: "1px solid "#3b82f6",
+    border: "1px solid #3b82f6",
     borderRadius: 12,
     padding: "12px 14px",
   },
