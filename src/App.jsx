@@ -841,7 +841,7 @@ const previewRight = [
 
 const styles = {
   page: {
-    background: "#1e293b",
+    background: "#020617",
     minHeight: "100vh",
     padding: 12,
     fontFamily: "Arial, sans-serif",
@@ -857,13 +857,15 @@ const styles = {
     overflow: "hidden",
     marginBottom: 14,
   },
-  topHeader: {
-    background: "#334155",
-    color: "#ffffff",
-    fontWeight: "bold",
-    fontSize: 22,
-    padding: "16px 18px",
-  },
+ topHeader: {
+  background: "#1e3a8a",
+  color: "#ffffff",
+  fontWeight: "bold",
+  fontSize: 22,
+  padding: "16px 18px",
+  borderBottom: "1px solid #3b82f6",
+  boxShadow: "0 0 10px rgba(59,130,246,0.3)",
+},
   topFields: {
     display: "grid",
     gap: 10,
@@ -942,13 +944,13 @@ const styles = {
     gap: 16,
   },
   floorHeaderGold: {
-    marginBottom: 8,
-    padding: "12px 14px",
-    background: "#334155",
-    color: "#ffffff",
-    borderRadius: 10,
-    fontWeight: "bold",
-  },
+  background: "#1e3a8a",
+  color: "#ffffff",
+  fontWeight: "bold",
+  padding: "10px 14px",
+  borderRadius: 10,
+  marginBottom: 8,
+},
   floorHeaderPurple: {
     marginBottom: 8,
     padding: "12px 14px",
