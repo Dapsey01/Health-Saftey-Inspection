@@ -461,7 +461,7 @@ const previewRight = [
 
         <div style={styles.card}>
           <div style={styles.sectionTitle}>Floor Summary</div>
-          <div style={styles.summaryGridTop}>
+          <div style={{ ...styles.summaryGridTop, color: "#ffffff" }}>
             {[
   floorSummary.find((f) => f.floor === "1st Floor"),
   floorSummary.find((f) => f.floor === "2nd Floor"),
