@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 
 const STATUS_OPTIONS = ["OK", "Issue"];
 const ACTION_OPTIONS = ["No Action", "Call Made", "HOTSOS Logged"];
-
 const ISSUE_OPTIONS = {
   "Hand Sink": ["Needs Cleaning", "Needs Soap", "Needs Paper Towels", "No Hot Water"],
   "Ice Machine": ["Not working", "Needs Cleaning"],
@@ -61,21 +60,25 @@ function isTempItem(item) {
   return item === "Reach-in Fridge" || item === "Walk-in Cooler";
 }
 
-function deepClone(value) {
-  return JSON.parse(JSON.stringify(value));
+function tempValues() {
+  const start = 29;
+  const end = 60;
+  const step = 0.5;
+  const count = Math.floor((end - start) / step) + 1;
+  return Array.from({ length: count }, (_, i) => {
+    const val = start + i * step;
+    return Number.isInteger(val) ? val : Number(val.toFixed(1));
+  });
 }
 
-function tempValues() {
-  return Array.from({ length: 61 }, (_, i) => i - 10);
+function isOutOfRange(val) {
+  if (val === "" || val === null || val === undefined) return false;
+  const num = Number(val);
+  return num < 33 || num > 41;
 }
 
 function buildInitialState() {
-  const state = {
-    inspector: "",
-    date: "",
-    time: "",
-    areas: {},
-  };
+  const state = { inspector: "", date: "", time: "", areas: {} };
 
   STRUCTURE.forEach((group) => {
     group.areas.forEach((area) => {
@@ -100,55 +103,58 @@ function buildInitialState() {
   return state;
 }
 
-function escapeHtml(value) {
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-export default function App() {
+export default function CCWalkApp() {
   const [form, setForm] = useState(buildInitialState);
   const [openAreas, setOpenAreas] = useState({});
   const [copyMessage, setCopyMessage] = useState("");
+
+  const setItemField = (area, item, field, value) => {
+    setForm((prev) => {
+      const next = structuredClone(prev);
+      next.areas[area].items[item][field] = value;
+
+      // 🔥 AUTO STATUS FOR TEMP ITEMS
+      if (field === "temperature" && isTempItem(item)) {
+        const num = Number(value);
+        if (value !== "" && (num < 33 || num > 41)) {
+          next.areas[area].items[item].status = "Issue";
+          next.areas[area].items[item].issue = num < 33 ? "Temp Too Low" : "Temp Too High";
+        }
+      }
+
+      if (field === "status" && value !== "Issue") {
+        next.areas[area].items[item].issue = "";
+        next.areas[area].items[item].engineerAction = "";
+        next.areas[area].items[item].hotsos = "";
+      }
+
+      if (field === "engineerAction" && value !== "HOTSOS Logged") {
+        next.areas[area].items[item].hotsos = "";
+      }
+
+      return next;
+    });
+  };
 
   const setTopField = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const setItemField = (areaName, itemName, field, value) => {
-    setForm((prev) => {
-      const next = deepClone(prev);
-      next.areas[areaName].items[itemName][field] = value;
-
-      if (field === "status" && value !== "Issue") {
-        next.areas[areaName].items[itemName].issue = "";
-        next.areas[areaName].items[itemName].engineerAction = "";
-        next.areas[areaName].items[itemName].hotsos = "";
-        next.areas[areaName].items[itemName].photos = [];
-      }
-
-      if (field === "engineerAction" && value !== "HOTSOS Logged") {
-        next.areas[areaName].items[itemName].hotsos = "";
-      }
-
-      return next;
-    });
+  const setAreaNotes = (area, value) => {
+    setForm((prev) => ({
+      ...prev,
+      areas: {
+        ...prev.areas,
+        [area]: {
+          ...prev.areas[area],
+          notes: value,
+        },
+      },
+    }));
   };
 
-  const setAreaNotes = (areaName, value) => {
-    setForm((prev) => {
-      const next = deepClone(prev);
-      next.areas[areaName].notes = value;
-      return next;
-    });
-  };
-
-  const addIssuePhotos = (areaName, itemName, files) => {
+  const addPhotos = (area, item, files) => {
     if (!files || !files.length) return;
-
     const readers = Array.from(files).map(
       (file) =>
         new Promise((resolve) => {
@@ -160,17 +166,17 @@ export default function App() {
 
     Promise.all(readers).then((images) => {
       setForm((prev) => {
-        const next = deepClone(prev);
-        next.areas[areaName].items[itemName].photos.push(...images);
+        const next = structuredClone(prev);
+        next.areas[area].items[item].photos = [...next.areas[area].items[item].photos, ...images];
         return next;
       });
     });
   };
 
-  const removeIssuePhoto = (areaName, itemName, index) => {
+  const removePhoto = (area, item, index) => {
     setForm((prev) => {
-      const next = deepClone(prev);
-      next.areas[areaName].items[itemName].photos.splice(index, 1);
+      const next = structuredClone(prev);
+      next.areas[area].items[item].photos.splice(index, 1);
       return next;
     });
   };
@@ -178,18 +184,12 @@ export default function App() {
   const floorSummary = useMemo(() => {
     return STRUCTURE.map((group) => {
       let issues = 0;
-
       group.areas.forEach((area) => {
         Object.values(form.areas[area.name].items).forEach((item) => {
           if (item.status === "Issue") issues += 1;
         });
       });
-
-      return {
-        floor: group.floor,
-        building: group.building,
-        issues,
-      };
+      return { floor: group.floor, issues, building: group.building };
     });
   }, [form]);
 
@@ -199,17 +199,11 @@ export default function App() {
       areas: group.areas.map((area) => {
         const issues = Object.entries(form.areas[area.name].items)
           .filter(([, item]) => item.status === "Issue")
-          .map(([itemName, item]) => ({
-            itemName,
-            ...item,
-          }));
+          .map(([itemName, item]) => ({ itemName, ...item }));
 
         const temps = Object.entries(form.areas[area.name].items)
           .filter(([itemName, item]) => isTempItem(itemName) && item.temperature)
-          .map(([itemName, item]) => ({
-            itemName,
-            temperature: item.temperature,
-          }));
+          .map(([itemName, item]) => ({ itemName, temperature: item.temperature }));
 
         return {
           name: area.name,
@@ -222,7 +216,7 @@ export default function App() {
   }, [form]);
 
   const issueCount = detailedReport.reduce(
-    (sum, group) => sum + group.areas.reduce((areaSum, area) => areaSum + area.issues.length, 0),
+    (sum, group) => sum + group.areas.reduce((aSum, area) => aSum + area.issues.length, 0),
     0
   );
 
@@ -230,9 +224,8 @@ export default function App() {
     (sum, group) =>
       sum +
       group.areas.reduce(
-        (areaSum, area) =>
-          areaSum +
-          area.issues.filter((issue) => issue.engineerAction === "Call Made").length,
+        (aSum, area) =>
+          aSum + area.issues.filter((issue) => issue.engineerAction === "Call Made").length,
         0
       ),
     0
@@ -242,64 +235,69 @@ export default function App() {
     (sum, group) =>
       sum +
       group.areas.reduce(
-        (areaSum, area) =>
-          areaSum +
-          area.issues.filter((issue) => issue.engineerAction === "HOTSOS Logged").length,
+        (aSum, area) =>
+          aSum + area.issues.filter((issue) => issue.engineerAction === "HOTSOS Logged").length,
         0
       ),
     0
   );
 
   const htmlEmail = useMemo(() => {
+    const escapeHtml = (value) =>
+      String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+    const floorSummaryHtml = `
+      <div style="margin:16px 0;border:1px solid #e2e8f0;border-radius:18px;background:#ffffff;padding:16px;">
+        <div style="font-weight:700;font-size:16px;color:#0f172a;margin-bottom:10px;">Floor Summary</div>
+        ${floorSummary
+          .map(
+            (f) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-top:1px solid #e2e8f0;">
+              <div style="font-size:14px;color:#0f172a;">${f.floor}</div>
+              <div style="font-size:13px;font-weight:700;color:${f.issues === 0 ? "#16a34a" : "#dc2626"};">
+                ${f.issues === 0 ? "Clear" : f.issues + " Issues"}
+              </div>
+            </div>`
+          )
+          .join("")}
+      </div>
+    `;
+
     const floorBlocks = detailedReport
       .map((group) => {
         const headerBg = group.building === "Separate" ? "#ddd6fe" : "#eab308";
-
         const areaHtml = group.areas
           .map((area) => {
             const hasContent = area.issues.length || area.temps.length || area.notes;
-
             const issuesHtml = area.issues
               .map(
-                (issue) => `
-                  <tr>
-                    <td style="padding:12px;border:1px solid #fecdd3;background:#ffffff;border-radius:12px;">
-                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-                        <tr>
-                          <td valign="top" style="padding-right:12px;">
-                            <div style="font-weight:700;color:#0f172a;font-size:15px;">${escapeHtml(issue.itemName)}</div>
-                            <div style="margin-top:4px;color:#334155;font-size:14px;line-height:1.4;">${escapeHtml(issue.issue || "Issue logged")}</div>
-                            <div style="margin-top:8px;">
-                              ${
-                                issue.temperature
-                                  ? `<span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">Temp ${escapeHtml(issue.temperature)}°F</span>`
-                                  : ""
-                              }
-                              ${
-                                issue.engineerAction && issue.engineerAction !== "No Action"
-                                  ? `<span style="display:inline-block;background:#e2e8f0;color:#334155;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">${escapeHtml(issue.engineerAction)}</span>`
-                                  : ""
-                              }
-                              ${
-                                issue.hotsos
-                                  ? `<span style="display:inline-block;background:#ffe4e6;color:#be123c;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">HOTSOS #${escapeHtml(issue.hotsos)}</span>`
-                                  : ""
-                              }
-                            </div>
-                          </td>
-                          <td valign="top" width="110">
-                            ${
-                              issue.photos && issue.photos[0]
-                                ? `<img src="${issue.photos[0]}" alt="Issue photo" width="110" style="display:block;width:110px;height:96px;object-fit:cover;border-radius:12px;border:1px solid #e2e8f0;" />`
-                                : `<div style="width:110px;height:96px;border-radius:12px;border:1px dashed #cbd5e1;color:#94a3b8;font-size:12px;text-align:center;line-height:96px;">No Photo</div>`
-                            }
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                  <tr><td height="10"></td></tr>
-                `
+                (issue, idx) => `
+                <tr>
+                  <td style="padding:12px;border:1px solid #fecdd3;background:#ffffff;border-radius:12px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                      <tr>
+                        <td valign="top" style="padding-right:12px;">
+                          <div style="font-weight:700;color:#0f172a;font-size:15px;">${escapeHtml(issue.itemName)}</div>
+                          <div style="margin-top:4px;color:#334155;font-size:14px;line-height:1.4;">${escapeHtml(issue.issue || "Issue logged")}</div>
+                          <div style="margin-top:8px;">
+                            ${issue.temperature ? `<span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">Temp ${escapeHtml(issue.temperature)}°F</span>` : ""}
+                            ${issue.engineerAction && issue.engineerAction !== "No Action" ? `<span style="display:inline-block;background:#e2e8f0;color:#334155;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">${escapeHtml(issue.engineerAction)}</span>` : ""}
+                            ${issue.hotsos ? `<span style="display:inline-block;background:#ffe4e6;color:#be123c;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">HOTSOS #${escapeHtml(issue.hotsos)}</span>` : ""}
+                          </div>
+                        </td>
+                        <td valign="top" width="110">
+                          ${issue.photos && issue.photos[0] ? `<img src="${issue.photos[0]}" alt="Issue photo" width="110" style="display:block;width:110px;height:96px;object-fit:cover;border-radius:12px;border:1px solid #e2e8f0;" />` : `<div style="width:110px;height:96px;border-radius:12px;border:1px dashed #cbd5e1;color:#94a3b8;font-size:12px;text-align:center;line-height:96px;">No Photo</div>`}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr><td height="10"></td></tr>`
               )
               .join("");
 
@@ -313,24 +311,17 @@ export default function App() {
                   ${area.temps
                     .map(
                       (temp) => `
-                        <tr>
-                          <td style="padding:10px 12px;border-top:1px solid #e2e8f0;color:#0f172a;font-size:14px;">${escapeHtml(temp.itemName)}</td>
-                          <td style="padding:10px 12px;border-top:1px solid #e2e8f0;color:#0f172a;font-size:14px;font-weight:700;">${escapeHtml(temp.temperature)}°F</td>
-                        </tr>
-                      `
+                    <tr>
+                      <td style="padding:10px 12px;border-top:1px solid #e2e8f0;color:#0f172a;font-size:14px;">${escapeHtml(temp.itemName)}</td>
+                      <td style="padding:10px 12px;border-top:1px solid #e2e8f0;color:#0f172a;font-size:14px;font-weight:700;">${escapeHtml(temp.temperature)}°F</td>
+                    </tr>`
                     )
                     .join("")}
-                </table>
-              `
+                </table>`
               : "";
 
             const notesHtml = area.notes
-              ? `
-                <div style="margin-top:12px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;padding:12px;">
-                  <div style="font-weight:700;color:#0f172a;font-size:14px;margin-bottom:6px;">Notes</div>
-                  <div style="color:#334155;font-size:14px;line-height:1.5;">${escapeHtml(area.notes)}</div>
-                </div>
-              `
+              ? `<div style="margin-top:12px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;padding:12px;"><div style="font-weight:700;color:#0f172a;font-size:14px;margin-bottom:6px;">Notes</div><div style="color:#334155;font-size:14px;line-height:1.5;">${escapeHtml(area.notes)}</div></div>`
               : "";
 
             return `
@@ -340,75 +331,15 @@ export default function App() {
                 ${issuesHtml ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${issuesHtml}</table>` : ""}
                 ${tempsHtml}
                 ${notesHtml}
-              </div>
-            `;
+              </div>`;
           })
           .join("");
 
-        return `
-          <div style="margin-top:18px;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;background:#ffffff;">
-            <div style="background:${headerBg};color:#0f172a;font-weight:700;font-size:18px;padding:14px 18px;">${escapeHtml(group.floor)}</div>
-            <div style="padding:16px;">${areaHtml}</div>
-          </div>
-        `;
+        return `<div style="margin-top:18px;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;background:#ffffff;"><div style="background:${headerBg};color:#0f172a;font-weight:700;font-size:18px;padding:14px 18px;">${escapeHtml(group.floor)}</div><div style="padding:16px;">${areaHtml}</div></div>`;
       })
       .join("");
 
-    return `
-      <!DOCTYPE html>
-      <html>
-        <body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f1f5f9;">
-            <tr>
-              <td align="center" style="padding:24px 12px;">
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:860px;border-collapse:collapse;">
-                  <tr>
-                    <td style="background:#ffffff;border:1px solid #e2e8f0;border-radius:22px;overflow:hidden;">
-                      <div style="background:#eab308;color:#0f172a;font-size:26px;font-weight:700;padding:22px 24px;">Conference Center Health &amp; Safety Walk Report</div>
-                      <div style="padding:18px 24px;background:#ffffff;">
-                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-                          <tr>
-                            <td style="font-size:14px;color:#334155;padding:0 12px 0 0;"><strong>Inspector:</strong> ${escapeHtml(form.inspector || "—")}</td>
-                            <td style="font-size:14px;color:#334155;padding:0 12px;"><strong>Date:</strong> ${escapeHtml(form.date || "—")}</td>
-                            <td style="font-size:14px;color:#334155;padding:0 0 0 12px;"><strong>Time:</strong> ${escapeHtml(form.time || "—")}</td>
-                          </tr>
-                        </table>
-                      </div>
-                    </td>
-                  </tr>
-
-                  <tr><td height="16"></td></tr>
-
-                  <tr>
-                    <td>
-                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:12px 0; margin:0 -12px;">
-                        <tr>
-                          <td width="33.33%" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:18px;vertical-align:top;">
-                            <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;">Areas Reviewed</div>
-                            <div style="margin-top:10px;font-size:32px;font-weight:700;color:#0f172a;">${STRUCTURE.reduce((sum, g) => sum + g.areas.length, 0)}</div>
-                          </td>
-                          <td width="33.33%" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:18px;vertical-align:top;">
-                            <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;">Issues Logged</div>
-                            <div style="margin-top:10px;font-size:32px;font-weight:700;color:#e11d48;">${issueCount}</div>
-                          </td>
-                          <td width="33.33%" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:18px;vertical-align:top;">
-                            <div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;">Engineering Follow Up</div>
-                            <div style="margin-top:10px;font-size:14px;font-weight:700;color:#0f172a;">Calls: ${callCount}<br/>HOTSOS: ${hotsosCount}</div>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-
-                  <tr><td height="16"></td></tr>
-                  <tr><td>${floorBlocks}</td></tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-        </body>
-      </html>
-    `;
+    return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f1f5f9;"><tr><td align="center" style="padding:24px 12px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:860px;border-collapse:collapse;"><tr><td style="background:#ffffff;border:1px solid #e2e8f0;border-radius:22px;overflow:hidden;"><div style="background:#eab308;color:#0f172a;font-size:26px;font-weight:700;padding:22px 24px;">Conference Center Health &amp; Safety Walk Report</div><div style="padding:18px 24px;background:#ffffff;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr><td style="font-size:14px;color:#334155;padding:0 12px 0 0;"><strong>Inspector:</strong> ${escapeHtml(form.inspector || "—")}</td><td style="font-size:14px;color:#334155;padding:0 12px;"><strong>Date:</strong> ${escapeHtml(form.date || "—")}</td><td style="font-size:14px;color:#334155;padding:0 0 0 12px;"><strong>Time:</strong> ${escapeHtml(form.time || "—")}</td></tr></table></div></td></tr><tr><td height="16"></td></tr><tr><td><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:12px 0; margin:0 -12px;"><tr><td width="33.33%" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:18px;vertical-align:top;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;">Areas Reviewed</div><div style="margin-top:10px;font-size:32px;font-weight:700;color:#0f172a;">${STRUCTURE.reduce((sum, g) => sum + g.areas.length, 0)}</div></td><td width="33.33%" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:18px;vertical-align:top;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;">Issues Logged</div><div style="margin-top:10px;font-size:32px;font-weight:700;color:#e11d48;">${issueCount}</div></td><td width="33.33%" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;padding:18px;vertical-align:top;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;">Engineering Follow Up</div><div style="margin-top:10px;font-size:14px;font-weight:700;color:#0f172a;">Calls: ${callCount}<br/>HOTSOS: ${hotsosCount}</div></td></tr></table></td></tr><tr><td height="16"></td></tr><tr><td>${floorSummaryHtml}${floorBlocks}</td></tr></table></td></tr></table></body></html>`;
   }, [detailedReport, form.date, form.inspector, form.time, issueCount, callCount, hotsosCount]);
 
   const copyHtmlEmail = async () => {
@@ -422,22 +353,17 @@ export default function App() {
       } else {
         await navigator.clipboard.writeText(htmlEmail);
       }
-
       setCopyMessage("Copied! Paste into Outlook.");
       setTimeout(() => setCopyMessage(""), 2500);
     } catch (error) {
-      setCopyMessage("Copy failed on this browser. Use Download Outlook HTML.");
+      setCopyMessage("Copy failed on this browser. Use Download for Mobile Outlook.");
       setTimeout(() => setCopyMessage(""), 3000);
     }
   };
 
   const openOutlookDraft = () => {
-    const subject = encodeURIComponent(
-      `Conference Center Health & Safety Walk Report${form.date ? ` - ${form.date}` : ""}`
-    );
-    const body = encodeURIComponent(
-      "Your formatted report is copied. Paste it into the body of this Outlook message for best results."
-    );
+    const subject = encodeURIComponent(`Conference Center Health & Safety Walk Report${form.date ? ` - ${form.date}` : ""}`);
+    const body = encodeURIComponent("Your formatted report is copied. Paste it into the body of this Outlook message for best results.");
     const outlookUrl = `https://outlook.office.com/mail/deeplink/compose?subject=${subject}&body=${body}`;
     window.open(outlookUrl, "_blank");
   };
@@ -453,39 +379,30 @@ export default function App() {
   };
 
   return (
-    <div style={pageStyle}>
-      <div style={containerStyle}>
-        <div style={headerCardStyle}>
-          <div style={topHeaderStyle}>Conference Center Health & Safety Walk</div>
-          <div style={topFieldsWrapStyle}>
-            <input
-              style={inputStyle}
-              placeholder="Inspector"
-              value={form.inspector}
-              onChange={(e) => setTopField("inspector", e.target.value)}
-            />
-            <input
-              style={inputStyle}
-              type="date"
-              value={form.date}
-              onChange={(e) => setTopField("date", e.target.value)}
-            />
-            <input
-              style={inputStyle}
-              type="time"
-              value={form.time}
-              onChange={(e) => setTopField("time", e.target.value)}
-            />
+    <div className="min-h-screen bg-slate-100 p-3 md:p-6">
+      <style>{`
+        body { font-family: Arial, sans-serif; }
+        .soft-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .soft-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 999px; }
+      `}</style>
+
+      <div className="mx-auto max-w-5xl space-y-4">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="bg-yellow-500 px-4 py-4 text-xl font-bold text-slate-900">Conference Center Health &amp; Safety Walk</div>
+          <div className="grid gap-2 p-4 md:grid-cols-3">
+            <input className="rounded-xl border border-slate-300 px-3 py-3" placeholder="Inspector" value={form.inspector} onChange={(e) => setTopField("inspector", e.target.value)} />
+            <input className="rounded-xl border border-slate-300 px-3 py-3" type="date" value={form.date} onChange={(e) => setTopField("date", e.target.value)} />
+            <input className="rounded-xl border border-slate-300 px-3 py-3" type="time" value={form.time} onChange={(e) => setTopField("time", e.target.value)} />
           </div>
         </div>
 
-        <div style={cardStyle}>
-          <div style={cardTitleStyle}>Floor Summary</div>
-          <div style={summaryGridStyle}>
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="px-4 py-3 text-lg font-bold text-slate-900">Floor Summary</div>
+          <div className="grid gap-2 p-4 md:grid-cols-3">
             {floorSummary.map((f) => (
-              <div key={f.floor} style={summaryRowStyle}>
-                <span style={{ fontWeight: 600 }}>{f.floor}</span>
-                <span style={f.issues === 0 ? clearBadgeStyle : issueBadgeStyle}>
+              <div key={f.floor} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-3">
+                <span className="font-medium text-slate-800">{f.floor}</span>
+                <span className={`rounded-full px-2 py-1 text-xs font-bold ${f.issues === 0 ? "bg-green-100 text-green-700" : "bg-rose-100 text-rose-700"}`}>
                   {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
                 </span>
               </div>
@@ -493,209 +410,81 @@ export default function App() {
           </div>
         </div>
 
-        <div style={mainGridStyle}>
-          <div>
+        <div className="grid gap-4 lg:grid-cols-[1.15fr,0.85fr]">
+          <div className="space-y-4">
             {STRUCTURE.map((group) => (
-              <div key={group.floor} style={{ marginBottom: 16 }}>
-                <div style={group.building === "Separate" ? floorHeaderPurple : floorHeaderGold}>
+              <div key={group.floor}>
+                <div className={`mb-2 rounded-xl px-4 py-3 font-bold ${group.building === "Separate" ? "bg-purple-200 text-slate-900" : "bg-yellow-500 text-slate-900"}`}>
                   {group.floor}
                 </div>
 
                 {group.areas.map((area) => (
-                  <div key={area.name} style={{ marginBottom: 10 }}>
+                  <div key={area.name} className="mb-3">
                     <button
                       type="button"
-                      style={pantryTileStyle}
-                      onClick={() =>
-                        setOpenAreas((prev) => ({ ...prev, [area.name]: !prev[area.name] }))
-                      }
+                      className="flex w-full items-center justify-between rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-4 text-left text-lg font-semibold text-slate-900 shadow-sm"
+                      onClick={() => setOpenAreas((prev) => ({ ...prev, [area.name]: !prev[area.name] }))}
                     >
                       <span>{area.name}</span>
-                      <span style={{ color: "#64748b", fontSize: 13 }}>
-                        {openAreas[area.name] ? "▲" : "▼"}
-                      </span>
+                      <span className="text-sm text-slate-500">{openAreas[area.name] ? "▲" : "▼"}</span>
                     </button>
 
                     {openAreas[area.name] && (
-                      <div style={areaBodyStyle}>
+                      <div className="mt-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
                         {area.items.map((item) => {
                           const data = form.areas[area.name].items[item];
                           const issueMode = data.status === "Issue";
-
                           return (
-                            <div key={item} style={itemCardStyle}>
-                              <div style={itemTitleStyle}>{item}</div>
-
-                              <div style={controlsGridStyle}>
-                                <select
-                                  style={selectStyle}
-                                  value={data.status}
-                                  onChange={(e) =>
-                                    setItemField(area.name, item, "status", e.target.value)
-                                  }
-                                >
+                            <div key={item} className="mb-3 rounded-xl border border-slate-200 p-3 last:mb-0">
+                              <div className="mb-2 font-semibold text-slate-900">{item}</div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <select className="rounded-xl border border-slate-300 px-3 py-3" value={data.status} onChange={(e) => setItemField(area.name, item, "status", e.target.value)}>
                                   <option value="">Status ▼</option>
-                                  {STATUS_OPTIONS.map((opt) => (
-                                    <option key={opt} value={opt}>
-                                      {opt}
-                                    </option>
-                                  ))}
+                                  {STATUS_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                                 </select>
 
                                 {isTempItem(item) ? (
-                                  <select
-                                    style={selectStyle}
-                                    value={data.temperature}
-                                    onChange={(e) =>
-                                      setItemField(area.name, item, "temperature", e.target.value)
-                                    }
-                                  >
+                                  <select className={`rounded-xl border px-3 py-3 ${isOutOfRange(data.temperature) ? "border-red-500 bg-red-50" : "border-slate-300"}`} value={data.temperature} onChange={(e) => setItemField(area.name, item, "temperature", e.target.value)}>
                                     <option value="">Temp °F ▼</option>
-                                    {tempValues().map((t) => (
-                                      <option key={t} value={t}>
-                                        {t}°F
-                                      </option>
-                                    ))}
+                                    {tempValues().map((t) => <option key={t} value={t}>{t}°F</option>)}
                                   </select>
                                 ) : (
-                                  <select
-                                    style={selectStyle}
-                                    value={data.issue}
-                                    disabled={!issueMode}
-                                    onChange={(e) =>
-                                      setItemField(area.name, item, "issue", e.target.value)
-                                    }
-                                  >
+                                  <select className="rounded-xl border border-slate-300 px-3 py-3" value={data.issue} disabled={!issueMode} onChange={(e) => setItemField(area.name, item, "issue", e.target.value)}>
                                     <option value="">Issue ▼</option>
-                                    {(ISSUE_OPTIONS[item] || []).map((opt) => (
-                                      <option key={opt} value={opt}>
-                                        {opt}
-                                      </option>
-                                    ))}
+                                    {(ISSUE_OPTIONS[item] || []).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                                   </select>
                                 )}
 
                                 {isTempItem(item) ? (
-                                  <select
-                                    style={selectStyle}
-                                    value={data.issue}
-                                    disabled={!issueMode}
-                                    onChange={(e) =>
-                                      setItemField(area.name, item, "issue", e.target.value)
-                                    }
-                                  >
+                                  <select className="rounded-xl border border-slate-300 px-3 py-3" value={data.issue} disabled={!issueMode} onChange={(e) => setItemField(area.name, item, "issue", e.target.value)}>
                                     <option value="">Issue ▼</option>
-                                    {(ISSUE_OPTIONS[item] || []).map((opt) => (
-                                      <option key={opt} value={opt}>
-                                        {opt}
-                                      </option>
-                                    ))}
+                                    {(ISSUE_OPTIONS[item] || []).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                                   </select>
                                 ) : (
-                                  <select
-                                    style={selectStyle}
-                                    value={data.engineerAction}
-                                    disabled={!issueMode}
-                                    onChange={(e) =>
-                                      setItemField(
-                                        area.name,
-                                        item,
-                                        "engineerAction",
-                                        e.target.value
-                                      )
-                                    }
-                                  >
+                                  <select className="rounded-xl border border-slate-300 px-3 py-3" value={data.engineerAction} disabled={!issueMode} onChange={(e) => setItemField(area.name, item, "engineerAction", e.target.value)}>
                                     <option value="">Engineer Action ▼</option>
-                                    {ACTION_OPTIONS.map((opt) => (
-                                      <option key={opt} value={opt}>
-                                        {opt}
-                                      </option>
-                                    ))}
+                                    {ACTION_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                                   </select>
                                 )}
 
                                 {isTempItem(item) ? (
-                                  <select
-                                    style={selectStyle}
-                                    value={data.engineerAction}
-                                    disabled={!issueMode}
-                                    onChange={(e) =>
-                                      setItemField(
-                                        area.name,
-                                        item,
-                                        "engineerAction",
-                                        e.target.value
-                                      )
-                                    }
-                                  >
+                                  <select className="rounded-xl border border-slate-300 px-3 py-3" value={data.engineerAction} disabled={!issueMode} onChange={(e) => setItemField(area.name, item, "engineerAction", e.target.value)}>
                                     <option value="">Engineer Action ▼</option>
-                                    {ACTION_OPTIONS.map((opt) => (
-                                      <option key={opt} value={opt}>
-                                        {opt}
-                                      </option>
-                                    ))}
+                                    {ACTION_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                                   </select>
                                 ) : (
-                                  <input
-                                    style={fullWidthInputStyle}
-                                    placeholder="HOTSOS #"
-                                    value={data.hotsos}
-                                    disabled={!issueMode || data.engineerAction !== "HOTSOS Logged"}
-                                    onChange={(e) =>
-                                      setItemField(area.name, item, "hotsos", e.target.value)
-                                    }
-                                  />
+                                  <input className="col-span-2 rounded-xl border border-slate-300 px-3 py-3" placeholder="HOTSOS #" value={data.hotsos} disabled={!issueMode || data.engineerAction !== "HOTSOS Logged"} onChange={(e) => setItemField(area.name, item, "hotsos", e.target.value)} />
                                 )}
 
                                 {isTempItem(item) && (
-                                  <input
-                                    style={fullWidthInputStyle}
-                                    placeholder="HOTSOS #"
-                                    value={data.hotsos}
-                                    disabled={!issueMode || data.engineerAction !== "HOTSOS Logged"}
-                                    onChange={(e) =>
-                                      setItemField(area.name, item, "hotsos", e.target.value)
-                                    }
-                                  />
+                                  <input className="col-span-2 rounded-xl border border-slate-300 px-3 py-3" placeholder="HOTSOS #" value={data.hotsos} disabled={!issueMode || data.engineerAction !== "HOTSOS Logged"} onChange={(e) => setItemField(area.name, item, "hotsos", e.target.value)} />
                                 )}
                               </div>
-
-                              {issueMode && (
-                                <div style={{ marginTop: 12 }}>
-                                  <div style={smallLabelStyle}>Issue Photos</div>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    capture="environment"
-                                    multiple
-                                    onChange={(e) => addIssuePhotos(area.name, item, e.target.files)}
-                                  />
-                                  <div style={thumbWrapRowStyle}>
-                                    {(data.photos || []).map((photo, pIdx) => (
-                                      <div key={pIdx} style={{ position: "relative" }}>
-                                        <img src={photo} alt="Issue" style={thumbStyle} />
-                                        <button
-                                          type="button"
-                                          style={removeThumbButtonStyle}
-                                          onClick={() => removeIssuePhoto(area.name, item, pIdx)}
-                                        >
-                                          X
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           );
                         })}
 
-                        <textarea
-                          style={textareaStyle}
-                          placeholder="Notes"
-                          value={form.areas[area.name].notes}
-                          onChange={(e) => setAreaNotes(area.name, e.target.value)}
-                        />
+                        <textarea className="min-h-[90px] w-full rounded-xl border border-slate-300 px-3 py-3" placeholder="Notes" value={form.areas[area.name].notes} onChange={(e) => setAreaNotes(area.name, e.target.value)} />
                       </div>
                     )}
                   </div>
@@ -704,28 +493,129 @@ export default function App() {
             ))}
           </div>
 
-          <div>
-            <div style={cardStyle}>
-              <div style={reportHeaderStyle}>Email Report Preview</div>
-
-              <div style={buttonBarStyle}>
-                <button type="button" style={darkBtn} onClick={copyHtmlEmail}>
-                  Copy for Outlook
-                </button>
-                <button type="button" style={lightBtn} onClick={openOutlookDraft}>
-                  Open Outlook Draft
-                </button>
-                <button type="button" style={goldBtn} onClick={downloadHtmlEmail}>
-                  Download Outlook HTML
-                </button>
-                {copyMessage ? <span style={copyMessageStyle}>{copyMessage}</span> : null}
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="bg-slate-900 px-4 py-4 text-lg font-bold text-white">Email Report Preview</div>
+              <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3">
+                <button type="button" onClick={copyHtmlEmail} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Copy for Desktop Outlook</button>
+                <button type="button" onClick={openOutlookDraft} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900">Open Outlook Draft</button>
+                <button type="button" onClick={downloadHtmlEmail} className="rounded-xl bg-yellow-500 px-4 py-2 text-sm font-semibold text-slate-900">Download for Mobile Outlook</button>
+                {copyMessage && <span className="text-sm font-medium text-slate-600">{copyMessage}</span>}
               </div>
+              <div className="space-y-4 p-4 soft-scroll max-h-[80vh] overflow-auto">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xl font-bold text-slate-900">Conference Center Health &amp; Safety Walk Report</div>
+                  <div className="mt-2 grid gap-2 text-sm text-slate-700 md:grid-cols-3">
+                    <div><span className="font-semibold">Inspector:</span> {form.inspector || "—"}</div>
+                    <div><span className="font-semibold">Date:</span> {form.date || "—"}</div>
+                    <div><span className="font-semibold">Time:</span> {form.time || "—"}</div>
+                  </div>
+                </div>
 
-              <div style={reportPreviewWrapStyle}>
-                <div
-                  style={reportInnerStyle}
-                  dangerouslySetInnerHTML={{ __html: htmlEmail }}
-                />
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Areas Reviewed</div>
+                    <div className="mt-2 text-3xl font-bold text-slate-900">{STRUCTURE.reduce((sum, g) => sum + g.areas.length, 0)}</div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Issues Logged</div>
+                    <div className="mt-2 text-3xl font-bold text-rose-600">{issueCount}</div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Engineering Follow Up</div>
+                    <div className="mt-2 text-sm font-semibold text-slate-900">Calls: {callCount} • HOTSOS: {hotsosCount}</div>
+                  </div>
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  <div className="px-4 py-3 font-bold bg-slate-100 text-slate-900">Floor Summary</div>
+                  <div className="grid grid-cols-2 gap-3 p-4">
+                    {[floorSummary[0], floorSummary[3], floorSummary[2]].map((f) => (
+                      <div key={`preview-floor-left-${f.floor}`} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3">
+                        <div className="text-sm text-slate-900">{f.floor}</div>
+                        <div className={`text-xs font-bold ${f.issues === 0 ? "text-green-600" : "text-rose-600"}`}>
+                          {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
+                        </div>
+                      </div>
+                    ))}
+
+                    {[floorSummary[4], floorSummary[1], floorSummary[5]].map((f) => (
+                      <div key={`preview-floor-right-${f.floor}`} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3">
+                        <div className="text-sm text-slate-900">{f.floor}</div>
+                        <div className={`text-xs font-bold ${f.issues === 0 ? "text-green-600" : "text-rose-600"}`}>
+                          {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {detailedReport.map((group) => (
+                  <div key={group.floor} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                    <div className={`px-4 py-3 font-bold ${group.building === "Separate" ? "bg-purple-200 text-slate-900" : "bg-yellow-500 text-slate-900"}`}>
+                      {group.floor}
+                    </div>
+
+                    <div className="space-y-3 p-4">
+                      {group.areas.map((area) => {
+                        const hasContent = area.issues.length || area.temps.length || area.notes;
+
+                        return (
+                          <div key={area.name} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="mb-3 text-lg font-bold text-slate-900">{area.name}</div>
+
+                            {!hasContent && <div className="text-sm text-slate-500">No issues noted.</div>}
+
+                            {!!area.issues.length && (
+                              <div className="space-y-3">
+                                {area.issues.map((issue, idx) => (
+                                  <div key={`${area.name}-${issue.itemName}-${idx}`} className="grid gap-3 rounded-xl border border-rose-200 bg-white p-3 md:grid-cols-[1fr,110px]">
+                                    <div>
+                                      <div className="font-semibold text-slate-900">{issue.itemName}</div>
+                                      <div className="mt-1 text-sm text-slate-700">{issue.issue || "Issue logged"}</div>
+                                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                                        {issue.temperature && <span className="rounded-full bg-amber-100 px-2 py-1 font-semibold text-amber-800">Temp {issue.temperature}°F</span>}
+                                        {issue.engineerAction && issue.engineerAction !== "No Action" && <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">{issue.engineerAction}</span>}
+                                        {issue.hotsos && <span className="rounded-full bg-rose-100 px-2 py-1 font-semibold text-rose-700">HOTSOS #{issue.hotsos}</span>}
+                                      </div>
+                                    </div>
+                                    {issue.photos && issue.photos[0] ? (
+                                      <img src={issue.photos[0]} alt="Issue" className="h-24 w-full rounded-xl border border-slate-200 object-cover" />
+                                    ) : (
+                                      <div className="flex h-24 items-center justify-center rounded-xl border border-dashed border-slate-300 text-xs text-slate-400">No Photo</div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {!!area.temps.length && (
+                              <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                                <div className="grid grid-cols-[1.5fr,1fr] bg-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-600">
+                                  <div>Temperature Log</div>
+                                  <div>Reading</div>
+                                </div>
+                                {area.temps.map((temp, idx) => (
+                                  <div key={`${area.name}-temp-${idx}`} className="grid grid-cols-[1.5fr,1fr] border-t border-slate-200 px-3 py-2 text-sm">
+                                    <div>{temp.itemName}</div>
+                                    <div className="font-semibold">{temp.temperature}°F</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {!!area.notes && (
+                              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700">
+                                <div className="mb-1 font-semibold text-slate-900">Notes</div>
+                                {area.notes}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -734,296 +624,3 @@ export default function App() {
     </div>
   );
 }
-
-const pageStyle = {
-  background: "#f1f5f9",
-  minHeight: "100vh",
-  padding: 12,
-  fontFamily: "Arial, sans-serif",
-};
-
-const containerStyle = {
-  maxWidth: 1300,
-  margin: "0 auto",
-};
-
-const headerCardStyle = {
-  background: "#fff",
-  border: "1px solid #e2e8f0",
-  borderRadius: 18,
-  overflow: "hidden",
-  marginBottom: 14,
-};
-
-const topHeaderStyle = {
-  background: "#eab308",
-  color: "#111827",
-  fontWeight: "bold",
-  fontSize: 24,
-  padding: "18px 20px",
-};
-
-const topFieldsWrapStyle = {
-  display: "grid",
-  gap: 10,
-  padding: 14,
-};
-
-const cardStyle = {
-  background: "#fff",
-  border: "1px solid #e2e8f0",
-  borderRadius: 18,
-  overflow: "hidden",
-  marginBottom: 14,
-};
-
-const cardTitleStyle = {
-  fontWeight: "bold",
-  fontSize: 20,
-  color: "#111827",
-  padding: "16px 18px 8px",
-};
-
-const summaryGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-  gap: 10,
-  padding: "0 14px 14px",
-};
-
-const summaryRowStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  border: "1px solid #e2e8f0",
-  borderRadius: 12,
-  padding: "12px 14px",
-  background: "#fff",
-  gap: 8,
-};
-
-const clearBadgeStyle = {
-  background: "#dcfce7",
-  color: "#166534",
-  borderRadius: 999,
-  padding: "4px 8px",
-  fontSize: 12,
-  fontWeight: "bold",
-};
-
-const issueBadgeStyle = {
-  background: "#ffe4e6",
-  color: "#be123c",
-  borderRadius: 999,
-  padding: "4px 8px",
-  fontSize: 12,
-  fontWeight: "bold",
-};
-
-const mainGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "1fr",
-  gap: 16,
-};
-
-const floorHeaderGold = {
-  marginBottom: 8,
-  padding: "12px 14px",
-  background: "#eab308",
-  color: "#111827",
-  borderRadius: 10,
-  fontWeight: "bold",
-};
-
-const floorHeaderPurple = {
-  marginBottom: 8,
-  padding: "12px 14px",
-  background: "#ddd6fe",
-  color: "#111827",
-  borderRadius: 10,
-  fontWeight: "bold",
-};
-
-const pantryTileStyle = {
-  width: "100%",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  padding: "14px 16px",
-  marginBottom: 10,
-  background: "#fef3c7",
-  border: "1px solid #fde68a",
-  borderRadius: 14,
-  fontWeight: 700,
-  fontSize: 18,
-  cursor: "pointer",
-  color: "#111827",
-};
-
-const areaBodyStyle = {
-  background: "#fff",
-  border: "1px solid #e2e8f0",
-  borderRadius: 14,
-  padding: 12,
-  marginTop: -2,
-  marginBottom: 8,
-};
-
-const itemCardStyle = {
-  border: "1px solid #e2e8f0",
-  borderRadius: 12,
-  padding: 12,
-  marginBottom: 12,
-};
-
-const itemTitleStyle = {
-  fontWeight: 700,
-  marginBottom: 10,
-  color: "#111827",
-};
-
-const controlsGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: 8,
-};
-
-const inputStyle = {
-  display: "block",
-  width: "100%",
-  padding: 12,
-  borderRadius: 10,
-  border: "1px solid #cbd5e1",
-  fontSize: 16,
-  boxSizing: "border-box",
-};
-
-const selectStyle = {
-  width: "100%",
-  padding: 12,
-  borderRadius: 10,
-  border: "1px solid #cbd5e1",
-  fontSize: 15,
-  background: "#fff",
-  boxSizing: "border-box",
-};
-
-const fullWidthInputStyle = {
-  gridColumn: "1 / -1",
-  width: "100%",
-  padding: 12,
-  borderRadius: 10,
-  border: "1px solid #cbd5e1",
-  fontSize: 15,
-  boxSizing: "border-box",
-};
-
-const textareaStyle = {
-  width: "100%",
-  minHeight: 95,
-  padding: 12,
-  borderRadius: 10,
-  border: "1px solid #cbd5e1",
-  fontSize: 15,
-  boxSizing: "border-box",
-};
-
-const smallLabelStyle = {
-  fontSize: 13,
-  fontWeight: 600,
-  color: "#475569",
-  marginBottom: 6,
-};
-
-const thumbWrapRowStyle = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: 8,
-  marginTop: 8,
-};
-
-const thumbStyle = {
-  width: 64,
-  height: 64,
-  objectFit: "cover",
-  borderRadius: 10,
-  border: "1px solid #cbd5e1",
-};
-
-const removeThumbButtonStyle = {
-  position: "absolute",
-  top: 4,
-  right: 4,
-  border: "none",
-  background: "#ef4444",
-  color: "#fff",
-  borderRadius: 999,
-  padding: "2px 6px",
-  fontSize: 10,
-  fontWeight: "bold",
-  cursor: "pointer",
-};
-
-const reportHeaderStyle = {
-  background: "#0f172a",
-  color: "#fff",
-  fontWeight: "bold",
-  fontSize: 20,
-  padding: "16px 18px",
-};
-
-const buttonBarStyle = {
-  display: "flex",
-  flexWrap: "wrap",
-  gap: 8,
-  alignItems: "center",
-  padding: "12px 14px",
-  borderBottom: "1px solid #e2e8f0",
-};
-
-const darkBtn = {
-  padding: "10px 14px",
-  background: "#0f172a",
-  color: "#fff",
-  border: "none",
-  borderRadius: 10,
-  cursor: "pointer",
-  fontWeight: 700,
-};
-
-const lightBtn = {
-  padding: "10px 14px",
-  background: "#fff",
-  border: "1px solid #cbd5e1",
-  borderRadius: 10,
-  cursor: "pointer",
-  fontWeight: 700,
-  color: "#111827",
-};
-
-const goldBtn = {
-  padding: "10px 14px",
-  background: "#eab308",
-  border: "none",
-  borderRadius: 10,
-  cursor: "pointer",
-  fontWeight: 700,
-  color: "#111827",
-};
-
-const copyMessageStyle = {
-  fontSize: 14,
-  fontWeight: 600,
-  color: "#475569",
-};
-
-const reportPreviewWrapStyle = {
-  padding: 14,
-  maxHeight: "80vh",
-  overflow: "auto",
-  background: "#fff",
-};
-
-const reportInnerStyle = {
-  minWidth: 320,
-};
