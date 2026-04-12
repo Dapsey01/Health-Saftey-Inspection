@@ -289,7 +289,7 @@ export default function App() {
 
     const floorBlocks = detailedReport
       .map((group) => {
-        const headerBg = group.building === "Separate" ? "#ddd6fe" : "#eab308";
+        const headerBg = group.building === "Separate" ? "#ddd6fe" : "#334155";
 
         const areaHtml = group.areas
           .map((area) => {
@@ -359,7 +359,7 @@ export default function App() {
               : "";
 
             const notesHtml = area.notes
-              ? `<div style="margin-top:12px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;padding:12px;"><div style="font-weight:700;color:#0f172a;font-size:14px;margin-bottom:6px;">Notes</div><div style="color:#334155;font-size:14px;line-height:1.5;">${escapeHtml(area.notes)}</div></div>`
+              ? `<div style="margin-top:12px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff;padding:12px;"><div style="font-weight:700;color:#ffffff;font-size:14px;margin-bottom:6px;">Notes</div><div style="color:#334155;font-size:14px;line-height:1.5;">${escapeHtml(area.notes)}</div></div>`
               : "";
 
             return `
@@ -745,7 +745,8 @@ const previewRight = [
                   <div
                     style={{
                       ...styles.previewGroupHeader,
-                      background: group.building === "Separate" ? "#ddd6fe" : "#eab308",
+                      background: group.building === "Separate" ? "#ddd6fe" : "#334155",
+                      color: group.building === "Separate" ? "#0f172a" : "#ffffff",
                     }}
                   >
                     {group.floor}
@@ -847,8 +848,8 @@ const styles = {
     marginBottom: 14,
   },
   topHeader: {
-    background: "#eab308",
-    color: "#111827",
+    background: "#334155",
+    color: "#ffffff",
     fontWeight: "bold",
     fontSize: 22,
     padding: "16px 18px",
@@ -933,8 +934,8 @@ const styles = {
   floorHeaderGold: {
     marginBottom: 8,
     padding: "12px 14px",
-    background: "#eab308",
-    color: "#111827",
+    background: "#334155",
+    color: "#ffffff",
     borderRadius: 10,
     fontWeight: "bold",
   },
