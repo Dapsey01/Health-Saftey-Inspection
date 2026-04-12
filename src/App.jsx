@@ -478,19 +478,22 @@ const previewRight = [
       ))}
     </div>
 
-    <div style={styles.previewSummaryCol}>
-      {[
-        floorSummary.find((f) => f.floor === "Marquee"),
-        floorSummary.find((f) => f.floor === "Signature Tower"),
-        floorSummary.find((f) => f.floor === "G.G.A. Kitchen"),
-      ].filter(Boolean).map((f) => (
-        <div key={`top-right-${f.floor}`} style={styles.previewSummaryRow}>
-          <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
-          <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
-            {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
-          </div
-      ))}
-          </div>
+   <div style={styles.previewSummaryCol}>
+  {[
+    floorSummary.find((f) => f.floor === "Marquee"),
+    floorSummary.find((f) => f.floor === "Signature Tower"),
+    floorSummary.find((f) => f.floor === "G.G.A. Kitchen"),
+  ]
+    .filter(Boolean)
+    .map((f) => (
+      <div key={`top-right-${f.floor}`} style={styles.previewSummaryRow}>
+        <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
+        <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
+          {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
+        </div>
+      </div>
+    ))}
+</div>
         </div>
         <div style={styles.mainStack}>
           <div>
