@@ -1027,6 +1027,3 @@ const reportPreviewWrapStyle = {
 const reportInnerStyle = {
   minWidth: 320,
 };
-
-@media (max-width: 980px) {
-}
