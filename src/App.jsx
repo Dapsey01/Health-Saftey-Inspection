@@ -420,8 +420,17 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  const previewLeft = [floorSummary[0], floorSummary[3], floorSummary[2]].filter(Boolean);
-  const previewRight = [floorSummary[4], floorSummary[1], floorSummary[5]].filter(Boolean);
+  const previewLeft = [
+  floorSummary.find((f) => f.floor === "1st Floor"),
+  floorSummary.find((f) => f.floor === "2nd Floor"),
+  floorSummary.find((f) => f.floor === "3rd Floor"),
+].filter(Boolean);
+
+const previewRight = [
+  floorSummary.find((f) => f.floor === "Marquee"),
+  floorSummary.find((f) => f.floor === "Signature Tower"),
+  floorSummary.find((f) => f.floor === "G.G.A. Kitchen"),
+].filter(Boolean);
 
   return (
     <div style={styles.page}>
