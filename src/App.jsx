@@ -822,7 +822,7 @@ const issueBadgeStyle = {
 
 const mainGridStyle = {
   display: "grid",
-  gridTemplateColumns: "1.1fr 0.9fr",
+  gridTemplateColumns: "1fr",
   gap: 16,
 };
 
