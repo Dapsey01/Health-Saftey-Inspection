@@ -453,14 +453,21 @@ export default function App() {
         <div style={styles.card}>
           <div style={styles.sectionTitle}>Floor Summary</div>
           <div style={styles.summaryGridTop}>
-            {floorSummary.map((f) => (
-              <div key={f.floor} style={styles.summaryTopRow}>
-                <span style={{ fontWeight: 600 }}>{f.floor}</span>
-                <span style={f.issues === 0 ? styles.clearBadge : styles.issueBadge}>
-                  {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
-                </span>
-              </div>
-            ))}
+            {[
+  floorSummary.find((f) => f.floor === "1st Floor"),
+  floorSummary.find((f) => f.floor === "Marquee"),
+  floorSummary.find((f) => f.floor === "3rd Floor"),
+  floorSummary.find((f) => f.floor === "Signature Tower"),
+  floorSummary.find((f) => f.floor === "2nd Floor"),
+  floorSummary.find((f) => f.floor === "G.G.A. Kitchen"),
+].filter(Boolean).map((f) => (
+  <div key={f.floor} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-3">
+    <span className="font-medium text-slate-800">{f.floor}</span>
+    <span className={`rounded-full px-2 py-1 text-xs font-bold ${f.issues === 0 ? "bg-green-100 text-green-700" : "bg-rose-100 text-rose-700"}`}>
+      {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
+    </span>
+  </div>
+))}
           </div>
         </div>
 
