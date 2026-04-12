@@ -459,24 +459,41 @@ const previewRight = [
           </div>
         </div>
 
-        <div style={styles.card}>
-          <div style={styles.sectionTitle}>Floor Summary</div>
-          <div style={{ ...styles.summaryGridTop, color: "#ffffff" }}>
-            {[
-  floorSummary.find((f) => f.floor === "1st Floor"),
-  floorSummary.find((f) => f.floor === "2nd Floor"),
-  floorSummary.find((f) => f.floor === "3rd Floor"),
-  floorSummary.find((f) => f.floor === "Marquee"),
-  floorSummary.find((f) => f.floor === "Signature Tower"),
-  floorSummary.find((f) => f.floor === "G.G.A. Kitchen"),
-].filter(Boolean).map((f) => (
-  <div key={f.floor} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-3">
-    <span className="font-medium text-slate-100">{f.floor}</span>
-    <span className={`rounded-full px-2 py-1 text-xs font-bold ${f.issues === 0 ? "bg-green-100 text-green-700" : "bg-rose-100 text-rose-700"}`}>
-      {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
-    </span>
+       <div style={styles.card}>
+  <div style={styles.sectionTitle}>Floor Summary</div>
+
+  <div style={styles.previewSummaryGrid}>
+    <div style={styles.previewSummaryCol}>
+      {[
+        floorSummary.find((f) => f.floor === "1st Floor"),
+        floorSummary.find((f) => f.floor === "2nd Floor"),
+        floorSummary.find((f) => f.floor === "3rd Floor"),
+      ].filter(Boolean).map((f) => (
+        <div key={`top-left-${f.floor}`} style={styles.previewSummaryRow}>
+          <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
+          <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
+            {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div style={styles.previewSummaryCol}>
+      {[
+        floorSummary.find((f) => f.floor === "Marquee"),
+        floorSummary.find((f) => f.floor === "Signature Tower"),
+        floorSummary.find((f) => f.floor === "G.G.A. Kitchen"),
+      ].filter(Boolean).map((f) => (
+        <div key={`top-right-${f.floor}`} style={styles.previewSummaryRow}>
+          <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
+          <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
+            {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
+          </div>
+        </div>
+      ))}
+    </div>
   </div>
-))}
+</div>
           </div>
         </div>
 
@@ -1152,34 +1169,35 @@ const styles = {
     color: "#0f172a",
   },
   previewSummaryGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 10,
-    padding: 14,
-  },
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 10,
+  padding: 14,
+},
   previewSummaryCol: {
-    display: "grid",
-    gap: 10,
-  },
+  display: "grid",
+  gap: 10,
+},
   previewSummaryRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 8,
-    border: "1px solid #e2e8f0",
-    borderRadius: 12,
-    padding: "12px 14px",
-  },
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 8,
+  border: "1px solid #334155",
+  borderRadius: 12,
+  padding: "12px 14px",
+  background: "#1e293b",
+},
   previewClear: {
-    color: "#16a34a",
-    fontWeight: "bold",
-    fontSize: 13,
-  },
+  color: "#86efac",
+  fontWeight: "bold",
+  fontSize: 13,
+},
   previewIssue: {
-    color: "#dc2626",
-    fontWeight: "bold",
-    fontSize: 13,
-  },
+  color: "#f87171",
+  fontWeight: "bold",
+  fontSize: 13,
+},
   previewGroupCard: {
     overflow: "hidden",
     borderRadius: 18,
