@@ -841,7 +841,7 @@ const previewRight = [
 
 const styles = {
   page: {
-    background: "#0b1220",
+    background: "#0f172a",
     minHeight: "100vh",
     padding: 12,
     fontFamily: "Arial, sans-serif",
@@ -851,7 +851,7 @@ const styles = {
     margin: "0 auto",
   },
   card: {
-    background: "#111827",
+    background: "#1e293b",
     border: "1px solid #1f2937",
     borderRadius: 18,
     overflow: "hidden",
@@ -964,7 +964,7 @@ const styles = {
   alignItems: "center",
   padding: "14px 16px",
   marginBottom: 10,
-  background: "#1e293b",           
+  background: "#273449",           
   border: "1px solid #334155",     
   borderRadius: 14,
   fontWeight: 700,
