@@ -508,8 +508,7 @@ const previewRight = [
           boxShadow: "0 0 0 1px #3b82f6",
         }
       : {}),
-  }}
-                      }
+}}
                     >
                       <span>{area.name}</span>
                       <span style={styles.chevron}>{openAreas[area.name] ? "▲" : "▼"}</span>
