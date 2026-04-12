@@ -455,10 +455,10 @@ export default function App() {
           <div style={styles.summaryGridTop}>
             {[
   floorSummary.find((f) => f.floor === "1st Floor"),
-  floorSummary.find((f) => f.floor === "Marquee"),
-  floorSummary.find((f) => f.floor === "3rd Floor"),
-  floorSummary.find((f) => f.floor === "Signature Tower"),
   floorSummary.find((f) => f.floor === "2nd Floor"),
+  floorSummary.find((f) => f.floor === "3rd Floor"),
+  floorSummary.find((f) => f.floor === "Marquee"),
+  floorSummary.find((f) => f.floor === "Signature Tower"),
   floorSummary.find((f) => f.floor === "G.G.A. Kitchen"),
 ].filter(Boolean).map((f) => (
   <div key={f.floor} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-3">
