@@ -490,13 +490,24 @@ const previewRight = [
 
                 {group.areas.map((area) => (
                   <div key={area.name} style={{ marginBottom: 10 }}>
-                    <button
+                   <button
+  onClick={() =>
+    setOpenAreas((prev) => ({
+      ...prev,
+      [area.name]: !prev[area.name],
+    }))
+  }
   style={{
     ...styles.pantryTile,
-    ...(openAreas[area.name] ? {
-      border: "1px solid #3b82f6",
-      boxShadow: "0 0 0 1px #3b82f6",
-    } : {})
+    background: "#1e293b",
+    color: "#f8fafc",
+    border: "1px solid #334155",
+    ...(openAreas[area.name]
+      ? {
+          border: "1px solid #3b82f6",
+          boxShadow: "0 0 0 1px #3b82f6",
+        }
+      : {}),
   }}
                       }
                     >
