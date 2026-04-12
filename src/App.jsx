@@ -4,38 +4,42 @@ export default function App() {
   const [copied, setCopied] = useState(false);
 
   const htmlReport = `
-  <div style="font-family:Arial;padding:20px;background:#f1f5f9;">
-    <div style="max-width:700px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #ddd;">
+<div style="font-family:Arial;padding:20px;background:#f1f5f9;">
+  <div style="max-width:800px;margin:auto;background:#fff;border-radius:18px;overflow:hidden;border:1px solid #ddd;">
+    
+    <div style="background:#eab308;padding:18px;font-size:24px;font-weight:bold;">
+      Conference Center Health & Safety Walk
+    </div>
+
+    <div style="padding:20px;">
       
-      <div style="background:#eab308;padding:16px;font-size:22px;font-weight:bold;">
-        Conference Center Health & Safety Walk
+      <div style="display:flex;gap:20px;margin-bottom:20px;">
+        <div><strong>Inspector:</strong> —</div>
+        <div><strong>Date:</strong> —</div>
+        <div><strong>Time:</strong> —</div>
       </div>
 
-      <div style="padding:16px;">
-        <div style="margin-bottom:12px;"><strong>Inspector:</strong> —</div>
-        <div style="margin-bottom:12px;"><strong>Date:</strong> —</div>
-        <div style="margin-bottom:12px;"><strong>Time:</strong> —</div>
-
-        <div style="margin-top:20px;font-weight:bold;">Floor Summary</div>
-
-        <div style="margin-top:10px;">
-          <div>1st Floor: Clear</div>
-          <div>2nd Floor: Clear</div>
-          <div>3rd Floor: Clear</div>
-          <div>Marquee: Clear</div>
-          <div>Signature Tower: Clear</div>
-          <div>G.G.A Kitchen: Clear</div>
-        </div>
-
-        <div style="margin-top:20px;padding:12px;background:#f0fdf4;border-radius:10px;">
-          No issues noted
-        </div>
-
+      <div style="margin-top:10px;font-weight:bold;font-size:16px;">
+        Floor Summary
       </div>
+
+      <div style="margin-top:10px;">
+        <div style="padding:6px 0;">1st Floor: Clear</div>
+        <div style="padding:6px 0;">2nd Floor: Clear</div>
+        <div style="padding:6px 0;">3rd Floor: Clear</div>
+        <div style="padding:6px 0;">Marquee: Clear</div>
+        <div style="padding:6px 0;">Signature Tower: Clear</div>
+        <div style="padding:6px 0;">G.G.A Kitchen: Clear</div>
+      </div>
+
+      <div style="margin-top:25px;padding:14px;background:#f0fdf4;border-radius:12px;font-weight:500;">
+        No issues noted
+      </div>
+
     </div>
   </div>
-  `;
-
+</div>
+`;
   const copyReport = async () => {
     await navigator.clipboard.writeText(htmlReport);
     setCopied(true);
