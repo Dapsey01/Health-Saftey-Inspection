@@ -11,6 +11,7 @@ const ISSUE_OPTIONS = {
   "Ice Machine": ["Not working", "Needs Cleaning"],
   "Reach-in Fridge": ["Temp Too Low", "Temp Too High"],
   "Walk-in Cooler": ["Temp Too Low", "Temp Too High"],
+  "Walk-in": ["Temp Too Low", "Temp Too High"],
 };
 
 const STRUCTURE = [
@@ -19,7 +20,7 @@ const STRUCTURE = [
     building: "Main",
     areas: [
       { name: "Pantry 1A", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] },
-      { name: "Pantry 1B", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] },
+      { name: "Pantry 1B", items: ["Hand Sink", "Ice Machine", "Reach-in 1B.1", "Reach-in 1B.2"] },
       { name: "Main Walk-in", items: ["Walk-in Cooler"] },
       { name: "Specialty Cooler", items: ["Walk-in Cooler"] },
     ],
@@ -28,8 +29,8 @@ const STRUCTURE = [
     floor: "2nd Floor",
     building: "Main",
     areas: [
-      { name: "Pantry 2A", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] },
-      { name: "Pantry 2B", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] },
+      { name: "Pantry 2A", items: ["Hand Sink", "Ice Machine", "Reach-in 2A.1", "Reach-in 2A.2"] },
+      { name: "Pantry 2B", items: ["Hand Sink", "Walk-in"] },
       { name: "201 Pantry", items: ["Hand Sink", "Reach-in Fridge"] },
       { name: "204 Pantry", items: ["Hand Sink", "Reach-in Fridge"] },
       { name: "205 Ice Machine", items: ["Ice Machine"] },
@@ -39,14 +40,16 @@ const STRUCTURE = [
     floor: "3rd Floor",
     building: "Main",
     areas: [
-      { name: "Pantry 3A", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] },
+      { name: "Pantry 3A", items: ["Hand Sink", "Ice Machine", "Reach-in 3A.1", "Reach-in 3A.2"] },
       { name: "Pantry 3B", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] },
     ],
   },
   {
     floor: "Marquee",
     building: "Main",
-    areas: [{ name: "Marquee", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] }],
+    areas: [
+      { name: "Marquee", items: ["Hand Sink", "Ice Machine", "Reach-in MQ.1", "Reach-in MQ.2", "Reach-in MQ.3"] },
+    ],
   },
   {
     floor: "Signature Tower",
@@ -65,7 +68,7 @@ function deepClone(value) {
 }
 
 function isTempItem(item) {
-  return item === "Reach-in Fridge" || item === "Walk-in Cooler";
+  return item.startsWith("Reach-in") || item === "Walk-in" || item === "Walk-in Cooler";
 }
 
 function isOutOfRange(value) {
@@ -122,26 +125,84 @@ function buildInitialState() {
   return state;
 }
 
+function normalizeFormData(raw) {
+  const base = buildInitialState();
+  if (!raw || typeof raw !== "object") return base;
+
+  base.inspector = raw.inspector || "";
+  base.date = raw.date || "";
+  base.time = raw.time || "";
+
+  Object.keys(base.areas).forEach((areaName) => {
+    const rawArea = raw.areas?.[areaName];
+    if (!rawArea) return;
+
+    base.areas[areaName].notes = rawArea.notes || "";
+
+    Object.keys(base.areas[areaName].items).forEach((itemName) => {
+      const rawItem = rawArea.items?.[itemName];
+      if (!rawItem) return;
+
+      base.areas[areaName].items[itemName] = {
+        status: rawItem.status || "",
+        issue: rawItem.issue || "",
+        temperature: rawItem.temperature || "",
+        engineerAction: rawItem.engineerAction || "",
+        hotsos: rawItem.hotsos || "",
+        photos: Array.isArray(rawItem.photos) ? rawItem.photos : [],
+      };
+    });
+  });
+
+  return base;
+}
+
+function stripPhotosFromForm(form) {
+  const next = deepClone(form);
+  Object.values(next.areas).forEach((area) => {
+    Object.values(area.items).forEach((item) => {
+      item.photos = [];
+    });
+  });
+  return next;
+}
+
 export default function App() {
   const [form, setForm] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : buildInitialState();
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? normalizeFormData(JSON.parse(saved)) : buildInitialState();
+    } catch {
+      return buildInitialState();
+    }
   });
 
   const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem(HISTORY_KEY);
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem(HISTORY_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
 
   const [openAreas, setOpenAreas] = useState({});
   const [copyMessage, setCopyMessage] = useState("");
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stripPhotosFromForm(form)));
+    } catch (err) {
+      console.warn("Auto-save skipped:", err);
+    }
   }, [form]);
 
   useEffect(() => {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    } catch (err) {
+      console.warn("History save skipped:", err);
+    }
   }, [history]);
 
   const setTopField = (field, value) => {
@@ -186,25 +247,33 @@ export default function App() {
     });
   };
 
-  const addIssuePhotos = (areaName, itemName, files) => {
+  const addIssuePhotos = async (areaName, itemName, files) => {
     if (!files || !files.length) return;
 
-    const readers = Array.from(files).map(
-      (file) =>
-        new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(file);
-        })
-    );
+    try {
+      const readers = Array.from(files).map(
+        (file) =>
+          new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(file);
+          })
+      );
 
-    Promise.all(readers).then((images) => {
+      const images = (await Promise.all(readers)).filter(Boolean);
+
+      if (!images.length) return;
+
       setForm((prev) => {
         const next = deepClone(prev);
-        next.areas[areaName].items[itemName].photos.push(...images);
+        const current = next.areas[areaName].items[itemName].photos || [];
+        next.areas[areaName].items[itemName].photos = [...current, ...images];
         return next;
       });
-    });
+    } catch (err) {
+      console.warn("Photo upload failed:", err);
+    }
   };
 
   const removeIssuePhoto = (areaName, itemName, index) => {
@@ -308,13 +377,13 @@ export default function App() {
       date: form.date || "",
       time: form.time || "",
       issues: issueCount,
-      data: deepClone(form),
+      data: stripPhotosFromForm(form),
     };
     setHistory((prev) => [entry, ...prev]);
   };
 
   const loadWalk = (entry) => {
-    setForm(deepClone(entry.data));
+    setForm(normalizeFormData(deepClone(entry.data)));
     setOpenAreas({});
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -726,6 +795,7 @@ export default function App() {
       flexWrap: "wrap",
       gap: 8,
       marginTop: 8,
+      alignItems: "flex-start",
     },
     thumb: {
       width: 64,
@@ -733,19 +803,8 @@ export default function App() {
       objectFit: "cover",
       borderRadius: 10,
       border: "1px solid #334155",
-    },
-    thumbDelete: {
-      position: "absolute",
-      top: 4,
-      right: 4,
-      border: "none",
-      background: "#ef4444",
-      color: "#fff",
-      borderRadius: 999,
-      padding: "2px 6px",
-      fontSize: 10,
-      fontWeight: "bold",
-      cursor: "pointer",
+      display: "block",
+      marginBottom: 6,
     },
     outOfRangeNote: {
       marginTop: 10,
@@ -803,52 +862,46 @@ export default function App() {
       borderBottom: "1px solid #1f2937",
     },
     darkBtn: {
-      ...{
-        padding: "14px 22px",
-        minWidth: 120,
-        textAlign: "center",
-        borderRadius: 999,
-        border: "1px solid #334155",
-        background: "linear-gradient(145deg, #475569, #1e293b)",
-        color: "#ffffff",
-        fontWeight: 700,
-        cursor: "pointer",
-        boxShadow:
-          "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.4), inset 0 2px 0 rgba(255,255,255,0.2)",
-        transition: "all 0.15s ease",
-      },
+      padding: "14px 22px",
+      minWidth: 120,
+      textAlign: "center",
+      borderRadius: 999,
+      border: "1px solid #334155",
+      background: "linear-gradient(145deg, #475569, #1e293b)",
+      color: "#ffffff",
+      fontWeight: 700,
+      cursor: "pointer",
+      boxShadow:
+        "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.4), inset 0 2px 0 rgba(255,255,255,0.2)",
+      transition: "all 0.15s ease",
     },
     lightBtn: {
-      ...{
-        padding: "14px 22px",
-        minWidth: 120,
-        textAlign: "center",
-        borderRadius: 999,
-        border: "1px solid #334155",
-        background: "linear-gradient(145deg, #475569, #1e293b)",
-        color: "#ffffff",
-        fontWeight: 700,
-        cursor: "pointer",
-        boxShadow:
-          "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.4), inset 0 2px 0 rgba(255,255,255,0.2)",
-        transition: "all 0.15s ease",
-      },
+      padding: "14px 22px",
+      minWidth: 120,
+      textAlign: "center",
+      borderRadius: 999,
+      border: "1px solid #334155",
+      background: "linear-gradient(145deg, #475569, #1e293b)",
+      color: "#ffffff",
+      fontWeight: 700,
+      cursor: "pointer",
+      boxShadow:
+        "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.4), inset 0 2px 0 rgba(255,255,255,0.2)",
+      transition: "all 0.15s ease",
     },
     goldBtn: {
-      ...{
-        padding: "14px 22px",
-        minWidth: 120,
-        textAlign: "center",
-        borderRadius: 999,
-        border: "1px solid #1e3a8a",
-        background: "linear-gradient(145deg, #60a5fa, #1d4ed8)",
-        color: "#ffffff",
-        fontWeight: 800,
-        cursor: "pointer",
-        boxShadow:
-          "0 8px 18px rgba(0,0,0,0.5), 0 0 18px rgba(59,130,246,0.9), inset 0 2px 0 rgba(255,255,255,0.3)",
-        transition: "all 0.15s ease",
-      },
+      padding: "14px 22px",
+      minWidth: 120,
+      textAlign: "center",
+      borderRadius: 999,
+      border: "1px solid #1e3a8a",
+      background: "linear-gradient(145deg, #60a5fa, #1d4ed8)",
+      color: "#ffffff",
+      fontWeight: 800,
+      cursor: "pointer",
+      boxShadow:
+        "0 8px 18px rgba(0,0,0,0.5), 0 0 18px rgba(59,130,246,0.9), inset 0 2px 0 rgba(255,255,255,0.3)",
+      transition: "all 0.15s ease",
     },
     copyMessage: {
       fontSize: 14,
