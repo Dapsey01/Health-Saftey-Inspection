@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-
+import React, { useEffect, useMemo, useState } from "react";
+const STORAGE_KEY = "cc_walk_form";
 const STATUS_OPTIONS = ["OK", "Issue"];
 const ACTION_OPTIONS = ["No Action", "Call Made", "HOTSOS Logged"];
 
@@ -120,10 +120,15 @@ function buildInitialState() {
 }
 
 export default function App() {
-  const [form, setForm] = useState(buildInitialState);
+  const [form, setForm] = useState(() => {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  return saved ? JSON.parse(saved) : buildInitialState();
+});
   const [openAreas, setOpenAreas] = useState({});
   const [copyMessage, setCopyMessage] = useState("");
-
+  useEffect(() => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+}, [form]);
   const setTopField = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
