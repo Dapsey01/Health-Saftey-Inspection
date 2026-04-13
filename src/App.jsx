@@ -596,34 +596,45 @@ export default function App() {
     },
     input: {
       width: "100%",
-      padding: 12,
-      borderRadius: 10,
-      border: "1px solid #cbd5e1",
-      fontSize: 16,
+      padding: 14,
+      borderRadius: 18,
+      border: "1px solid #334155",
+      fontSize: 18,
+      fontWeight: 600,
       boxSizing: "border-box",
-      background: "#f8fafc",
-      color: "#0f172a",
+      background: "linear-gradient(145deg, #475569, #1e293b)",
+      color: "#ffffff",
+      boxShadow:
+        "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)",
+      outline: "none",
     },
     textarea: {
       width: "100%",
       minHeight: 95,
-      padding: 12,
-      borderRadius: 10,
+      padding: 14,
+      borderRadius: 18,
       border: "1px solid #334155",
       fontSize: 15,
       boxSizing: "border-box",
-      background: "#0f172a",
-      color: "#f8fafc",
+      background: "linear-gradient(145deg, #475569, #1e293b)",
+      color: "#ffffff",
+      boxShadow:
+        "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)",
+      outline: "none",
     },
     select: {
       width: "100%",
-      padding: 12,
-      borderRadius: 10,
+      padding: 14,
+      borderRadius: 18,
       border: "1px solid #334155",
       fontSize: 15,
+      fontWeight: 600,
       boxSizing: "border-box",
-      background: "#0f172a",
-      color: "#f8fafc",
+      background: "linear-gradient(145deg, #475569, #1e293b)",
+      color: "#ffffff",
+      boxShadow:
+        "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)",
+      outline: "none",
     },
     tempAlert: {
       border: "1px solid #ef4444",
@@ -665,13 +676,15 @@ export default function App() {
       alignItems: "center",
       padding: "14px 16px",
       marginBottom: 10,
-      background: "#3f4f68",
+      background: "linear-gradient(145deg, #475569, #334155)",
       border: "1px solid #334155",
-      borderRadius: 14,
+      borderRadius: 18,
       fontWeight: 700,
       fontSize: 18,
       cursor: "pointer",
       color: "#f8fafc",
+      boxShadow:
+        "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.18), inset 0 2px 0 rgba(255,255,255,0.12)",
     },
     chevron: {
       color: "#93c5fd",
@@ -747,6 +760,8 @@ export default function App() {
 
     btnPrimary: {
       padding: "14px 22px",
+      minWidth: 120,
+      textAlign: "center",
       borderRadius: 999,
       border: "1px solid #1e3a8a",
       background: "linear-gradient(145deg, #60a5fa, #1d4ed8)",
@@ -758,7 +773,9 @@ export default function App() {
       transition: "all 0.15s ease",
     },
     btnSecondary: {
-      padding: "12px 18px",
+      padding: "14px 22px",
+      minWidth: 120,
+      textAlign: "center",
       borderRadius: 999,
       border: "1px solid #334155",
       background: "linear-gradient(145deg, #475569, #1e293b)",
@@ -786,31 +803,52 @@ export default function App() {
       borderBottom: "1px solid #1f2937",
     },
     darkBtn: {
-      padding: "10px 14px",
-      background: "#0f172a",
-      color: "#fff",
-      border: "none",
-      borderRadius: 10,
-      cursor: "pointer",
-      fontWeight: 700,
+      ...{
+        padding: "14px 22px",
+        minWidth: 120,
+        textAlign: "center",
+        borderRadius: 999,
+        border: "1px solid #334155",
+        background: "linear-gradient(145deg, #475569, #1e293b)",
+        color: "#ffffff",
+        fontWeight: 700,
+        cursor: "pointer",
+        boxShadow:
+          "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.4), inset 0 2px 0 rgba(255,255,255,0.2)",
+        transition: "all 0.15s ease",
+      },
     },
     lightBtn: {
-      padding: "10px 14px",
-      background: "#1e293b",
-      color: "#ffffff",
-      border: "1px solid #334155",
-      borderRadius: 10,
-      cursor: "pointer",
-      fontWeight: 700,
+      ...{
+        padding: "14px 22px",
+        minWidth: 120,
+        textAlign: "center",
+        borderRadius: 999,
+        border: "1px solid #334155",
+        background: "linear-gradient(145deg, #475569, #1e293b)",
+        color: "#ffffff",
+        fontWeight: 700,
+        cursor: "pointer",
+        boxShadow:
+          "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.4), inset 0 2px 0 rgba(255,255,255,0.2)",
+        transition: "all 0.15s ease",
+      },
     },
     goldBtn: {
-      padding: "10px 14px",
-      background: "#1e3a8a",
-      color: "#ffffff",
-      border: "1px solid #3b82f6",
-      borderRadius: 10,
-      cursor: "pointer",
-      fontWeight: 700,
+      ...{
+        padding: "14px 22px",
+        minWidth: 120,
+        textAlign: "center",
+        borderRadius: 999,
+        border: "1px solid #1e3a8a",
+        background: "linear-gradient(145deg, #60a5fa, #1d4ed8)",
+        color: "#ffffff",
+        fontWeight: 800,
+        cursor: "pointer",
+        boxShadow:
+          "0 8px 18px rgba(0,0,0,0.5), 0 0 18px rgba(59,130,246,0.9), inset 0 2px 0 rgba(255,255,255,0.3)",
+        transition: "all 0.15s ease",
+      },
     },
     copyMessage: {
       fontSize: 14,
@@ -1044,6 +1082,7 @@ export default function App() {
     historyWrap: {
       display: "grid",
       gap: 10,
+      marginTop: 14,
     },
     historyItem: {
       border: "1px solid #334155",
@@ -1051,7 +1090,6 @@ export default function App() {
       borderRadius: 14,
       background: "#1e293b",
       color: "#ffffff",
-      marginTop: 12,
     },
     historyMeta: {
       color: "#cbd5e1",
@@ -1185,6 +1223,9 @@ export default function App() {
                 {group.areas.map((area) => (
                   <div key={area.name} style={{ marginBottom: 10 }}>
                     <button
+                      onMouseDown={press}
+                      onMouseUp={release}
+                      onMouseLeave={release}
                       onClick={() =>
                         setOpenAreas((prev) => ({
                           ...prev,
@@ -1197,8 +1238,8 @@ export default function App() {
                           ? "1px solid #3b82f6"
                           : styles.pantryTile.border,
                         boxShadow: openAreas[area.name]
-                          ? "0 0 0 1px #3b82f6"
-                          : "none",
+                          ? "0 0 0 1px #3b82f6, 0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.18), inset 0 2px 0 rgba(255,255,255,0.12)"
+                          : styles.pantryTile.boxShadow,
                       }}
                     >
                       <span>{area.name}</span>
@@ -1346,10 +1387,13 @@ export default function App() {
                                         <img src={photo} alt="Issue" style={styles.thumb} />
                                         <button
                                           type="button"
-                                          style={styles.thumbDelete}
+                                          style={styles.btnSecondary}
+                                          onMouseDown={press}
+                                          onMouseUp={release}
+                                          onMouseLeave={release}
                                           onClick={() => removeIssuePhoto(area.name, item, idx)}
                                         >
-                                          X
+                                          Delete
                                         </button>
                                       </div>
                                     ))}
@@ -1382,13 +1426,34 @@ export default function App() {
             <div style={styles.reportHeader}>Email Report Preview</div>
 
             <div style={styles.buttonBar}>
-              <button type="button" style={styles.darkBtn} onClick={copyHtmlEmail}>
+              <button
+                type="button"
+                style={styles.darkBtn}
+                onMouseDown={press}
+                onMouseUp={release}
+                onMouseLeave={release}
+                onClick={copyHtmlEmail}
+              >
                 Copy for Desktop Outlook
               </button>
-              <button type="button" style={styles.lightBtn} onClick={openOutlookDraft}>
+              <button
+                type="button"
+                style={styles.lightBtn}
+                onMouseDown={press}
+                onMouseUp={release}
+                onMouseLeave={release}
+                onClick={openOutlookDraft}
+              >
                 Open Outlook Draft
               </button>
-              <button type="button" style={styles.goldBtn} onClick={downloadHtmlEmail}>
+              <button
+                type="button"
+                style={styles.goldBtn}
+                onMouseDown={press}
+                onMouseUp={release}
+                onMouseLeave={release}
+                onClick={downloadHtmlEmail}
+              >
                 Download for Mobile Outlook
               </button>
               {copyMessage ? <span style={styles.copyMessage}>{copyMessage}</span> : null}
