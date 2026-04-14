@@ -262,7 +262,6 @@ export default function App() {
       );
 
       const images = (await Promise.all(readers)).filter(Boolean);
-
       if (!images.length) return;
 
       setForm((prev) => {
@@ -461,7 +460,9 @@ export default function App() {
                         <td valign="top" width="110">
                           ${
                             issue.photos && issue.photos[0]
-                              ? `<img src="${issue.photos[0]}" alt="Issue photo" width="110" style="display:block;width:110px;height:96px;object-fit:cover;border-radius:12px;border:1px solid #d1d5db;" />`
+                              ? `<a href="${issue.photos[0]}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">
+                                   <img src="${issue.photos[0]}" alt="Issue photo" width="110" style="display:block;width:110px;height:96px;object-fit:cover;border-radius:12px;border:1px solid #d1d5db;cursor:pointer;" />
+                                 </a>`
                               : `<div style="width:110px;height:96px;border-radius:12px;border:1px dashed #cbd5e1;color:#94a3b8;font-size:12px;text-align:center;line-height:96px;">No Photo</div>`
                           }
                         </td>
