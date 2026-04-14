@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE_KEY = "cc_walk_form";
 const HISTORY_KEY = "cc_walk_history";
@@ -188,6 +188,7 @@ export default function App() {
 
   const [openAreaName, setOpenAreaName] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
+  const areaRefs = useRef({});
 
   useEffect(() => {
     try {
@@ -279,6 +280,29 @@ export default function App() {
     setForm((prev) => {
       const next = deepClone(prev);
       next.areas[areaName].items[itemName].photos.splice(index, 1);
+      return next;
+    });
+  };
+
+  const handleAreaToggle = (areaName) => {
+    setOpenAreaName((prev) => {
+      const next = prev === areaName ? "" : areaName;
+
+      if (next) {
+        requestAnimationFrame(() => {
+          const el = areaRefs.current[areaName];
+          if (!el) return;
+
+          const rect = el.getBoundingClientRect();
+          const targetTop = window.scrollY + rect.top - window.innerHeight * 0.18;
+
+          window.scrollTo({
+            top: Math.max(0, targetTop),
+            behavior: "smooth",
+          });
+        });
+      }
+
       return next;
     });
   };
@@ -1276,14 +1300,18 @@ export default function App() {
                   const isOpen = openAreaName === area.name;
 
                   return (
-                    <div key={area.name} style={{ marginBottom: 10 }}>
+                    <div
+                      key={area.name}
+                      style={{ marginBottom: 10 }}
+                      ref={(el) => {
+                        areaRefs.current[area.name] = el;
+                      }}
+                    >
                       <button
                         onMouseDown={press}
                         onMouseUp={release}
                         onMouseLeave={release}
-                        onClick={() =>
-                          setOpenAreaName((prev) => (prev === area.name ? "" : area.name))
-                        }
+                        onClick={() => handleAreaToggle(area.name)}
                         style={{
                           ...styles.pantryTile,
                           border: isOpen ? "1px solid #3b82f6" : styles.pantryTile.border,
