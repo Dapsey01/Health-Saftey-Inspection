@@ -186,7 +186,7 @@ export default function App() {
     }
   });
 
-  const [openAreas, setOpenAreas] = useState({});
+  const [openAreaName, setOpenAreaName] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
 
   useEffect(() => {
@@ -383,7 +383,7 @@ export default function App() {
 
   const loadWalk = (entry) => {
     setForm(normalizeFormData(deepClone(entry.data)));
-    setOpenAreas({});
+    setOpenAreaName("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -394,7 +394,7 @@ export default function App() {
   const newWalk = () => {
     localStorage.removeItem(STORAGE_KEY);
     setForm(buildInitialState());
-    setOpenAreas({});
+    setOpenAreaName("");
   };
 
   const scrollToHistory = () => {
@@ -1272,204 +1272,203 @@ export default function App() {
                   {group.floor}
                 </div>
 
-                {group.areas.map((area) => (
-                  <div key={area.name} style={{ marginBottom: 10 }}>
-                    <button
-                      onMouseDown={press}
-                      onMouseUp={release}
-                      onMouseLeave={release}
-                      onClick={() =>
-                        setOpenAreas((prev) => ({
-                          ...prev,
-                          [area.name]: !prev[area.name],
-                        }))
-                      }
-                      style={{
-                        ...styles.pantryTile,
-                        border: openAreas[area.name]
-                          ? "1px solid #3b82f6"
-                          : styles.pantryTile.border,
-                        boxShadow: openAreas[area.name]
-                          ? "0 0 0 1px #3b82f6, 0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.18), inset 0 2px 0 rgba(255,255,255,0.12)"
-                          : styles.pantryTile.boxShadow,
-                      }}
-                    >
-                      <span>{area.name}</span>
-                      <span style={styles.chevron}>{openAreas[area.name] ? "▲" : "▼"}</span>
-                    </button>
+                {group.areas.map((area) => {
+                  const isOpen = openAreaName === area.name;
 
-                    {openAreas[area.name] && (
-                      <div style={styles.areaBody}>
-                        {area.items.map((item) => {
-                          const data = form.areas[area.name].items[item];
-                          const issueMode = data.status === "Issue";
+                  return (
+                    <div key={area.name} style={{ marginBottom: 10 }}>
+                      <button
+                        onMouseDown={press}
+                        onMouseUp={release}
+                        onMouseLeave={release}
+                        onClick={() =>
+                          setOpenAreaName((prev) => (prev === area.name ? "" : area.name))
+                        }
+                        style={{
+                          ...styles.pantryTile,
+                          border: isOpen ? "1px solid #3b82f6" : styles.pantryTile.border,
+                          boxShadow: isOpen
+                            ? "0 0 0 1px #3b82f6, 0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.18), inset 0 2px 0 rgba(255,255,255,0.12)"
+                            : styles.pantryTile.boxShadow,
+                        }}
+                      >
+                        <span>{area.name}</span>
+                        <span style={styles.chevron}>{isOpen ? "▲" : "▼"}</span>
+                      </button>
 
-                          return (
-                            <div key={item} style={styles.itemCard}>
-                              <div style={styles.itemTitle}>{item}</div>
+                      {isOpen && (
+                        <div style={styles.areaBody}>
+                          {area.items.map((item) => {
+                            const data = form.areas[area.name].items[item];
+                            const issueMode = data.status === "Issue";
 
-                              <div style={styles.twoColGrid}>
-                                <select
-                                  style={styles.select}
-                                  value={data.status}
-                                  onChange={(e) => setItemField(area.name, item, "status", e.target.value)}
-                                >
-                                  <option value="">Status ▼</option>
-                                  {STATUS_OPTIONS.map((opt) => (
-                                    <option key={opt} value={opt}>
-                                      {opt}
-                                    </option>
-                                  ))}
-                                </select>
+                            return (
+                              <div key={item} style={styles.itemCard}>
+                                <div style={styles.itemTitle}>{item}</div>
 
-                                {isTempItem(item) ? (
-                                  <select
-                                    style={{
-                                      ...styles.select,
-                                      ...(isOutOfRange(data.temperature) ? styles.tempAlert : {}),
-                                    }}
-                                    value={data.temperature}
-                                    onChange={(e) => setItemField(area.name, item, "temperature", e.target.value)}
-                                  >
-                                    <option value="">Temp °F ▼</option>
-                                    {tempValues().map((t) => (
-                                      <option key={t} value={t}>
-                                        {t}°F
-                                      </option>
-                                    ))}
-                                  </select>
-                                ) : (
+                                <div style={styles.twoColGrid}>
                                   <select
                                     style={styles.select}
-                                    value={data.issue}
-                                    disabled={!issueMode}
-                                    onChange={(e) => setItemField(area.name, item, "issue", e.target.value)}
+                                    value={data.status}
+                                    onChange={(e) => setItemField(area.name, item, "status", e.target.value)}
                                   >
-                                    <option value="">Issue ▼</option>
-                                    {(ISSUE_OPTIONS[item] || []).map((opt) => (
+                                    <option value="">Status ▼</option>
+                                    {STATUS_OPTIONS.map((opt) => (
                                       <option key={opt} value={opt}>
                                         {opt}
                                       </option>
                                     ))}
                                   </select>
+
+                                  {isTempItem(item) ? (
+                                    <select
+                                      style={{
+                                        ...styles.select,
+                                        ...(isOutOfRange(data.temperature) ? styles.tempAlert : {}),
+                                      }}
+                                      value={data.temperature}
+                                      onChange={(e) => setItemField(area.name, item, "temperature", e.target.value)}
+                                    >
+                                      <option value="">Temp °F ▼</option>
+                                      {tempValues().map((t) => (
+                                        <option key={t} value={t}>
+                                          {t}°F
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <select
+                                      style={styles.select}
+                                      value={data.issue}
+                                      disabled={!issueMode}
+                                      onChange={(e) => setItemField(area.name, item, "issue", e.target.value)}
+                                    >
+                                      <option value="">Issue ▼</option>
+                                      {(ISSUE_OPTIONS[item] || []).map((opt) => (
+                                        <option key={opt} value={opt}>
+                                          {opt}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  )}
+
+                                  {isTempItem(item) ? (
+                                    <select
+                                      style={styles.select}
+                                      value={data.issue}
+                                      disabled={!issueMode}
+                                      onChange={(e) => setItemField(area.name, item, "issue", e.target.value)}
+                                    >
+                                      <option value="">Issue ▼</option>
+                                      {(ISSUE_OPTIONS[item] || []).map((opt) => (
+                                        <option key={opt} value={opt}>
+                                          {opt}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <select
+                                      style={styles.select}
+                                      value={data.engineerAction}
+                                      disabled={!issueMode}
+                                      onChange={(e) =>
+                                        setItemField(area.name, item, "engineerAction", e.target.value)
+                                      }
+                                    >
+                                      <option value="">Engineer Action ▼</option>
+                                      {ACTION_OPTIONS.map((opt) => (
+                                        <option key={opt} value={opt}>
+                                          {opt}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  )}
+
+                                  {isTempItem(item) ? (
+                                    <select
+                                      style={styles.select}
+                                      value={data.engineerAction}
+                                      disabled={!issueMode}
+                                      onChange={(e) =>
+                                        setItemField(area.name, item, "engineerAction", e.target.value)
+                                      }
+                                    >
+                                      <option value="">Engineer Action ▼</option>
+                                      {ACTION_OPTIONS.map((opt) => (
+                                        <option key={opt} value={opt}>
+                                          {opt}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <input
+                                      style={{ ...styles.input, gridColumn: "1 / -1" }}
+                                      placeholder="HOTSOS #"
+                                      value={data.hotsos}
+                                      disabled={!issueMode || data.engineerAction !== "HOTSOS Logged"}
+                                      onChange={(e) => setItemField(area.name, item, "hotsos", e.target.value)}
+                                    />
+                                  )}
+
+                                  {isTempItem(item) && (
+                                    <input
+                                      style={{ ...styles.input, gridColumn: "1 / -1" }}
+                                      placeholder="HOTSOS #"
+                                      value={data.hotsos}
+                                      disabled={!issueMode || data.engineerAction !== "HOTSOS Logged"}
+                                      onChange={(e) => setItemField(area.name, item, "hotsos", e.target.value)}
+                                    />
+                                  )}
+                                </div>
+
+                                {issueMode && (
+                                  <div style={{ marginTop: 12 }}>
+                                    <div style={styles.smallLabel}>Issue Photos</div>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      capture="environment"
+                                      multiple
+                                      onChange={(e) => addIssuePhotos(area.name, item, e.target.files)}
+                                    />
+                                    <div style={styles.photoRow}>
+                                      {(data.photos || []).map((photo, idx) => (
+                                        <div key={idx} style={{ position: "relative" }}>
+                                          <img src={photo} alt="Issue" style={styles.thumb} />
+                                          <button
+                                            type="button"
+                                            style={styles.btnSecondary}
+                                            onMouseDown={press}
+                                            onMouseUp={release}
+                                            onMouseLeave={release}
+                                            onClick={() => removeIssuePhoto(area.name, item, idx)}
+                                          >
+                                            Delete
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
                                 )}
 
-                                {isTempItem(item) ? (
-                                  <select
-                                    style={styles.select}
-                                    value={data.issue}
-                                    disabled={!issueMode}
-                                    onChange={(e) => setItemField(area.name, item, "issue", e.target.value)}
-                                  >
-                                    <option value="">Issue ▼</option>
-                                    {(ISSUE_OPTIONS[item] || []).map((opt) => (
-                                      <option key={opt} value={opt}>
-                                        {opt}
-                                      </option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <select
-                                    style={styles.select}
-                                    value={data.engineerAction}
-                                    disabled={!issueMode}
-                                    onChange={(e) =>
-                                      setItemField(area.name, item, "engineerAction", e.target.value)
-                                    }
-                                  >
-                                    <option value="">Engineer Action ▼</option>
-                                    {ACTION_OPTIONS.map((opt) => (
-                                      <option key={opt} value={opt}>
-                                        {opt}
-                                      </option>
-                                    ))}
-                                  </select>
-                                )}
-
-                                {isTempItem(item) ? (
-                                  <select
-                                    style={styles.select}
-                                    value={data.engineerAction}
-                                    disabled={!issueMode}
-                                    onChange={(e) =>
-                                      setItemField(area.name, item, "engineerAction", e.target.value)
-                                    }
-                                  >
-                                    <option value="">Engineer Action ▼</option>
-                                    {ACTION_OPTIONS.map((opt) => (
-                                      <option key={opt} value={opt}>
-                                        {opt}
-                                      </option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <input
-                                    style={{ ...styles.input, gridColumn: "1 / -1" }}
-                                    placeholder="HOTSOS #"
-                                    value={data.hotsos}
-                                    disabled={!issueMode || data.engineerAction !== "HOTSOS Logged"}
-                                    onChange={(e) => setItemField(area.name, item, "hotsos", e.target.value)}
-                                  />
-                                )}
-
-                                {isTempItem(item) && (
-                                  <input
-                                    style={{ ...styles.input, gridColumn: "1 / -1" }}
-                                    placeholder="HOTSOS #"
-                                    value={data.hotsos}
-                                    disabled={!issueMode || data.engineerAction !== "HOTSOS Logged"}
-                                    onChange={(e) => setItemField(area.name, item, "hotsos", e.target.value)}
-                                  />
+                                {isTempItem(item) && isOutOfRange(data.temperature) && (
+                                  <div style={styles.outOfRangeNote}>Out of range</div>
                                 )}
                               </div>
+                            );
+                          })}
 
-                              {issueMode && (
-                                <div style={{ marginTop: 12 }}>
-                                  <div style={styles.smallLabel}>Issue Photos</div>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    capture="environment"
-                                    multiple
-                                    onChange={(e) => addIssuePhotos(area.name, item, e.target.files)}
-                                  />
-                                  <div style={styles.photoRow}>
-                                    {(data.photos || []).map((photo, idx) => (
-                                      <div key={idx} style={{ position: "relative" }}>
-                                        <img src={photo} alt="Issue" style={styles.thumb} />
-                                        <button
-                                          type="button"
-                                          style={styles.btnSecondary}
-                                          onMouseDown={press}
-                                          onMouseUp={release}
-                                          onMouseLeave={release}
-                                          onClick={() => removeIssuePhoto(area.name, item, idx)}
-                                        >
-                                          Delete
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {isTempItem(item) && isOutOfRange(data.temperature) && (
-                                <div style={styles.outOfRangeNote}>Out of range</div>
-                              )}
-                            </div>
-                          );
-                        })}
-
-                        <textarea
-                          style={styles.textarea}
-                          placeholder="Notes"
-                          value={form.areas[area.name].notes}
-                          onChange={(e) => setAreaNotes(area.name, e.target.value)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                ))}
+                          <textarea
+                            style={styles.textarea}
+                            placeholder="Notes"
+                            value={form.areas[area.name].notes}
+                            onChange={(e) => setAreaNotes(area.name, e.target.value)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
