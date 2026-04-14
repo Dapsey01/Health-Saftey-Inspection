@@ -436,7 +436,7 @@ export default function App() {
                   <td style="padding:12px;border:1px solid #fecdd3;background:#ffffff;border-radius:12px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
                       <tr>
-                        <td valign="top" style="padding-right:12px;">
+                        <td valign="top" style="padding-right:14px;">
                           <div style="font-weight:700;color:#111827;font-size:15px;">${escapeHtml(issue.itemName)}</div>
                           <div style="margin-top:4px;color:#475569;font-size:14px;line-height:1.4;">${escapeHtml(issue.issue || "Issue logged")}</div>
                           <div style="margin-top:8px;">
@@ -457,13 +457,11 @@ export default function App() {
                             }
                           </div>
                         </td>
-                        <td valign="top" width="110">
+                        <td valign="top" width="180">
                           ${
                             issue.photos && issue.photos[0]
-                              ? `<a href="${issue.photos[0]}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">
-                                   <img src="${issue.photos[0]}" alt="Issue photo" width="110" style="display:block;width:110px;height:96px;object-fit:cover;border-radius:12px;border:1px solid #d1d5db;cursor:pointer;" />
-                                 </a>`
-                              : `<div style="width:110px;height:96px;border-radius:12px;border:1px dashed #cbd5e1;color:#94a3b8;font-size:12px;text-align:center;line-height:96px;">No Photo</div>`
+                              ? `<img src="${issue.photos[0]}" alt="Issue photo" width="180" style="display:block;width:180px;height:135px;object-fit:cover;border-radius:12px;border:1px solid #d1d5db;" />`
+                              : `<div style="width:180px;height:135px;border-radius:12px;border:1px dashed #cbd5e1;color:#94a3b8;font-size:12px;text-align:center;line-height:135px;">No Photo</div>`
                           }
                         </td>
                       </tr>
