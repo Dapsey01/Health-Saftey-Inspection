@@ -660,15 +660,6 @@ export default function App() {
     }
   };
 
-  const openOutlookDraft = () => {
-    const subject = encodeURIComponent(reportSubject);
-    const body = encodeURIComponent(
-      "Your formatted report is copied. Paste it into the body of this Outlook message for best results."
-    );
-    const url = `https://outlook.office.com/mail/deeplink/compose?subject=${subject}&body=${body}`;
-    window.open(url, "_blank");
-  };
-
   const downloadHtmlEmail = () => {
     const blob = new Blob([htmlEmail], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -927,20 +918,6 @@ export default function App() {
       borderBottom: "1px solid #1f2937",
     },
     darkBtn: {
-      padding: "14px 22px",
-      minWidth: 120,
-      textAlign: "center",
-      borderRadius: 999,
-      border: "1px solid #334155",
-      background: "linear-gradient(145deg, #475569, #1e293b)",
-      color: "#ffffff",
-      fontWeight: 700,
-      cursor: "pointer",
-      boxShadow:
-        "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.4), inset 0 2px 0 rgba(255,255,255,0.2)",
-      transition: "all 0.15s ease",
-    },
-    lightBtn: {
       padding: "14px 22px",
       minWidth: 120,
       textAlign: "center",
@@ -1581,16 +1558,6 @@ export default function App() {
                 onClick={copyHtmlEmail}
               >
                 Copy for Desktop Outlook
-              </button>
-              <button
-                type="button"
-                style={styles.lightBtn}
-                onMouseDown={press}
-                onMouseUp={release}
-                onMouseLeave={release}
-                onClick={openOutlookDraft}
-              >
-                Open Outlook Draft
               </button>
               <button
                 type="button"
