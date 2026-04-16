@@ -7,7 +7,7 @@ const STATUS_OPTIONS = ["OK", "Issue"];
 const ACTION_OPTIONS = ["No Action", "Call Made", "HOTSOS Logged"];
 
 const ISSUE_OPTIONS = {
-  "Hand Sink": ["Needs Cleaning", "Needs Soap", "Needs Paper Towels", "No Hot Water"],
+  "Hand Sink": ["Needs Cleaning", "Needs Soap", "Needs Paper Towels", "No Hot Water", "Needs Trash Can"],
   "Ice Machine": ["Not working", "Needs Cleaning"],
   "Reach-in Fridge": ["Temp Too Low", "Temp Too High"],
   "Walk-in Cooler": ["Temp Too Low", "Temp Too High"],
@@ -758,6 +758,17 @@ export default function App() {
       boxShadow:
         "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)",
       outline: "none",
+      appearance: "none",
+      WebkitAppearance: "none",
+      MozAppearance: "none",
+    },
+    formControlFix: {
+      background: "linear-gradient(145deg, #475569, #1e293b)",
+      color: "#ffffff",
+      border: "1px solid #334155",
+      borderRadius: 18,
+      boxShadow:
+        "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)",
     },
     tempAlert: {
       border: "1px solid #ef4444",
@@ -1391,13 +1402,13 @@ export default function App() {
 
                                 <div style={styles.twoColGrid}>
                                   <select
-                                    style={styles.select}
+                                    style={{ ...styles.select, ...styles.formControlFix }}
                                     value={data.status}
                                     onChange={(e) => setItemField(area.name, item, "status", e.target.value)}
                                   >
                                     <option value="">Status ▼</option>
                                     {STATUS_OPTIONS.map((opt) => (
-                                      <option key={opt} value={opt}>
+                                      <option key={opt} value={opt} style={{ color: "#111827" }}>
                                         {opt}
                                       </option>
                                     ))}
@@ -1407,6 +1418,7 @@ export default function App() {
                                     <select
                                       style={{
                                         ...styles.select,
+                                        ...styles.formControlFix,
                                         ...(isOutOfRange(data.temperature) ? styles.tempAlert : {}),
                                       }}
                                       value={data.temperature}
@@ -1414,21 +1426,21 @@ export default function App() {
                                     >
                                       <option value="">Temp °F ▼</option>
                                       {tempValues().map((t) => (
-                                        <option key={t} value={t}>
+                                        <option key={t} value={t} style={{ color: "#111827" }}>
                                           {t}°F
                                         </option>
                                       ))}
                                     </select>
                                   ) : (
                                     <select
-                                      style={styles.select}
+                                      style={{ ...styles.select, ...styles.formControlFix }}
                                       value={data.issue}
                                       disabled={!issueMode}
                                       onChange={(e) => setItemField(area.name, item, "issue", e.target.value)}
                                     >
                                       <option value="">Issue ▼</option>
                                       {(ISSUE_OPTIONS[item] || []).map((opt) => (
-                                        <option key={opt} value={opt}>
+                                        <option key={opt} value={opt} style={{ color: "#111827" }}>
                                           {opt}
                                         </option>
                                       ))}
@@ -1437,21 +1449,21 @@ export default function App() {
 
                                   {isTempItem(item) ? (
                                     <select
-                                      style={styles.select}
+                                      style={{ ...styles.select, ...styles.formControlFix }}
                                       value={data.issue}
                                       disabled={!issueMode}
                                       onChange={(e) => setItemField(area.name, item, "issue", e.target.value)}
                                     >
                                       <option value="">Issue ▼</option>
                                       {(ISSUE_OPTIONS[item] || []).map((opt) => (
-                                        <option key={opt} value={opt}>
+                                        <option key={opt} value={opt} style={{ color: "#111827" }}>
                                           {opt}
                                         </option>
                                       ))}
                                     </select>
                                   ) : (
                                     <select
-                                      style={styles.select}
+                                      style={{ ...styles.select, ...styles.formControlFix }}
                                       value={data.engineerAction}
                                       disabled={!issueMode}
                                       onChange={(e) =>
@@ -1460,7 +1472,7 @@ export default function App() {
                                     >
                                       <option value="">Engineer Action ▼</option>
                                       {ACTION_OPTIONS.map((opt) => (
-                                        <option key={opt} value={opt}>
+                                        <option key={opt} value={opt} style={{ color: "#111827" }}>
                                           {opt}
                                         </option>
                                       ))}
@@ -1469,7 +1481,7 @@ export default function App() {
 
                                   {isTempItem(item) ? (
                                     <select
-                                      style={styles.select}
+                                      style={{ ...styles.select, ...styles.formControlFix }}
                                       value={data.engineerAction}
                                       disabled={!issueMode}
                                       onChange={(e) =>
@@ -1478,14 +1490,14 @@ export default function App() {
                                     >
                                       <option value="">Engineer Action ▼</option>
                                       {ACTION_OPTIONS.map((opt) => (
-                                        <option key={opt} value={opt}>
+                                        <option key={opt} value={opt} style={{ color: "#111827" }}>
                                           {opt}
                                         </option>
                                       ))}
                                     </select>
                                   ) : (
                                     <input
-                                      style={{ ...styles.input, gridColumn: "1 / -1" }}
+                                      style={{ ...styles.input, ...styles.formControlFix, gridColumn: "1 / -1" }}
                                       placeholder="HOTSOS #"
                                       value={data.hotsos}
                                       disabled={!issueMode || data.engineerAction !== "HOTSOS Logged"}
@@ -1495,7 +1507,7 @@ export default function App() {
 
                                   {isTempItem(item) && (
                                     <input
-                                      style={{ ...styles.input, gridColumn: "1 / -1" }}
+                                      style={{ ...styles.input, ...styles.formControlFix, gridColumn: "1 / -1" }}
                                       placeholder="HOTSOS #"
                                       value={data.hotsos}
                                       disabled={!issueMode || data.engineerAction !== "HOTSOS Logged"}
@@ -1542,7 +1554,7 @@ export default function App() {
                           })}
 
                           <textarea
-                            style={styles.textarea}
+                            style={{ ...styles.textarea, ...styles.formControlFix }}
                             placeholder="Notes"
                             value={form.areas[area.name].notes}
                             onChange={(e) => setAreaNotes(area.name, e.target.value)}
