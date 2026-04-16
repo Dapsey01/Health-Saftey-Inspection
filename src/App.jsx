@@ -189,6 +189,7 @@ export default function App() {
   const [openAreaName, setOpenAreaName] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const areaRefs = useRef({});
+  const receiveWalkInputRef = useRef(null);
 
   useEffect(() => {
     try {
@@ -416,6 +417,8 @@ export default function App() {
       data: stripPhotosFromForm(form),
     };
     setHistory((prev) => [entry, ...prev]);
+    setCopyMessage("Walk saved.");
+    setTimeout(() => setCopyMessage(""), 2000);
   };
 
   const loadWalk = (entry) => {
@@ -432,6 +435,65 @@ export default function App() {
     localStorage.removeItem(STORAGE_KEY);
     setForm(buildInitialState());
     setOpenAreaName("");
+  };
+
+  const handOffWalk = () => {
+    try {
+      const payload = {
+        type: "cc-walk-handoff",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        form,
+      };
+
+      const safeInspector = (form.inspector || "Supervisor").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-");
+      const safeDate = (form.date || "No-Date").replace(/[^\w-]/g, "");
+      const filename = `CC-Walk-${safeInspector || "Supervisor"}-${safeDate}.json`;
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json;charset=utf-8",
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      setCopyMessage("Walk handoff file downloaded.");
+      setTimeout(() => setCopyMessage(""), 2500);
+    } catch {
+      setCopyMessage("Hand Off failed.");
+      setTimeout(() => setCopyMessage(""), 2500);
+    }
+  };
+
+  const triggerReceiveWalk = () => {
+    receiveWalkInputRef.current?.click();
+  };
+
+  const receiveWalk = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const incoming = parsed?.form ? parsed.form : parsed;
+
+      setForm(normalizeFormData(incoming));
+      setOpenAreaName("");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      setCopyMessage("Walk received.");
+      setTimeout(() => setCopyMessage(""), 2500);
+    } catch {
+      setCopyMessage("Receive Walk failed. Please use a valid handoff file.");
+      setTimeout(() => setCopyMessage(""), 3500);
+    } finally {
+      event.target.value = "";
+    }
   };
 
   const scrollToHistory = () => {
@@ -872,7 +934,6 @@ export default function App() {
       fontSize: 12,
       fontWeight: "bold",
     },
-
     btnPrimary: {
       padding: "14px 22px",
       minWidth: 120,
@@ -901,7 +962,6 @@ export default function App() {
         "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.4), inset 0 2px 0 rgba(255,255,255,0.2)",
       transition: "all 0.15s ease",
     },
-
     reportHeader: {
       background: "#0f172a",
       color: "#fff",
@@ -1236,6 +1296,14 @@ export default function App() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
+        <input
+          ref={receiveWalkInputRef}
+          type="file"
+          accept=".json,application/json"
+          style={{ display: "none" }}
+          onChange={receiveWalk}
+        />
+
         <div style={styles.card}>
           <div style={styles.topHeader}>Conference Center Health & Safety Walk</div>
 
@@ -1293,6 +1361,28 @@ export default function App() {
                 onClick={scrollToHistory}
               >
                 Walk History
+              </button>
+
+              <button
+                type="button"
+                style={styles.btnSecondary}
+                onMouseDown={press}
+                onMouseUp={release}
+                onMouseLeave={release}
+                onClick={handOffWalk}
+              >
+                Hand Off
+              </button>
+
+              <button
+                type="button"
+                style={styles.btnSecondary}
+                onMouseDown={press}
+                onMouseUp={release}
+                onMouseLeave={release}
+                onClick={triggerReceiveWalk}
+              >
+                Receive Walk
               </button>
             </div>
           </div>
