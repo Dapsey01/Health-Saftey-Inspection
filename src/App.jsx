@@ -329,24 +329,35 @@ export default function App() {
     return STRUCTURE.map((group) => ({
       ...group,
       areas: group.areas.map((area) => {
-        const issues = Object.entries(form.areas[area.name].items)
+        const areaItems = form.areas[area.name].items;
+
+        const issues = Object.entries(areaItems)
           .filter(([, item]) => item.status === "Issue")
           .map(([itemName, item]) => ({
             itemName,
             ...item,
           }));
 
-        const temps = Object.entries(form.areas[area.name].items)
+        const temps = Object.entries(areaItems)
           .filter(([itemName, item]) => isTempItem(itemName) && item.temperature !== "")
           .map(([itemName, item]) => ({
             itemName,
             temperature: item.temperature,
           }));
 
+        const routineChecks = Object.entries(areaItems)
+          .filter(([itemName]) => itemName === "Hand Sink" || itemName === "Ice Machine")
+          .map(([itemName, item]) => ({
+            itemName,
+            status: item.status === "Issue" ? "Issue" : "OK",
+            issue: item.status === "Issue" ? item.issue || "Issue logged" : "No issues noted",
+          }));
+
         return {
           name: area.name,
           issues,
           temps,
+          routineChecks,
           notes: form.areas[area.name].notes,
         };
       }),
@@ -391,6 +402,8 @@ export default function App() {
     floorSummary.find((f) => f.floor === "Signature Tower"),
     floorSummary.find((f) => f.floor === "G.G.A. Kitchen"),
   ].filter(Boolean);
+
+  const reportSubject = `CC Walk - ${form.inspector || "Supervisor"} - ${form.date || "No Date"}`;
 
   const saveWalk = () => {
     const entry = {
@@ -451,7 +464,26 @@ export default function App() {
 
         const areaHtml = group.areas
           .map((area) => {
-            const hasContent = area.issues.length || area.temps.length || area.notes;
+            const hasContent =
+              area.issues.length || area.temps.length || area.notes || area.routineChecks.length;
+
+            const routineChecksHtml = area.routineChecks.length
+              ? `
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:12px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#ffffff;">
+                  <tr>
+                    <td colspan="2" style="background:#f8fafc;color:#475569;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 12px;border-bottom:1px solid #e5e7eb;">Routine Checks</td>
+                  </tr>
+                  ${area.routineChecks
+                    .map(
+                      (check) => `
+                      <tr>
+                        <td style="padding:10px 12px;border-top:1px solid #e5e7eb;color:#111827;font-size:14px;">${escapeHtml(check.itemName)}</td>
+                        <td style="padding:10px 12px;border-top:1px solid #e5e7eb;color:${check.status === "OK" ? "#15803d" : "#b91c1c"};font-size:14px;font-weight:700;text-align:right;">${escapeHtml(check.status)}${check.status === "OK" ? "" : ` - ${escapeHtml(check.issue)}`}</td>
+                      </tr>`
+                    )
+                    .join("")}
+                </table>`
+              : "";
 
             const issuesHtml = area.issues
               .map(
@@ -524,7 +556,8 @@ export default function App() {
               <div style="margin-top:12px;border:1px solid #e5e7eb;border-radius:16px;background:#f8fafc;padding:16px;">
                 <div style="font-weight:700;font-size:18px;color:#111827;margin-bottom:8px;">${escapeHtml(area.name)}</div>
                 ${!hasContent ? `<div style="font-size:14px;color:#64748b;">No issues noted.</div>` : ""}
-                ${issuesHtml ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${issuesHtml}</table>` : ""}
+                ${routineChecksHtml}
+                ${issuesHtml ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:12px;">${issuesHtml}</table>` : ""}
                 ${tempsHtml}
                 ${notesHtml}
               </div>`;
@@ -628,9 +661,7 @@ export default function App() {
   };
 
   const openOutlookDraft = () => {
-    const subject = encodeURIComponent(
-      `Conference Center Health & Safety Walk Report${form.date ? ` - ${form.date}` : ""}`
-    );
+    const subject = encodeURIComponent(reportSubject);
     const body = encodeURIComponent(
       "Your formatted report is copied. Paste it into the body of this Outlook message for best results."
     );
@@ -1061,6 +1092,30 @@ export default function App() {
     noIssuesText: {
       fontSize: 14,
       color: "#cbd5e1",
+    },
+    previewRoutineWrap: {
+      marginTop: 10,
+      overflow: "hidden",
+      border: "1px solid #334155",
+      borderRadius: 12,
+      background: "#111827",
+    },
+    previewRoutineHeader: {
+      background: "#0f172a",
+      padding: "10px 12px",
+      fontSize: 12,
+      fontWeight: "bold",
+      textTransform: "uppercase",
+      color: "#cbd5e1",
+    },
+    previewRoutineRow: {
+      display: "grid",
+      gridTemplateColumns: "1.4fr 1fr",
+      gap: 8,
+      padding: "10px 12px",
+      borderTop: "1px solid #334155",
+      color: "#f8fafc",
+      fontSize: 14,
     },
     previewIssueCard: {
       display: "grid",
@@ -1545,6 +1600,7 @@ export default function App() {
                   <div><strong>Inspector:</strong> {form.inspector || "—"}</div>
                   <div><strong>Date:</strong> {form.date || "—"}</div>
                   <div><strong>Time:</strong> {form.time || "—"}</div>
+                  <div><strong>Subject:</strong> {reportSubject}</div>
                 </div>
               </div>
 
@@ -1603,13 +1659,34 @@ export default function App() {
 
                   <div style={styles.previewGroupBody}>
                     {group.areas.map((area) => {
-                      const hasContent = area.issues.length || area.temps.length || area.notes;
+                      const hasContent =
+                        area.issues.length || area.temps.length || area.notes || area.routineChecks.length;
 
                       return (
                         <div key={area.name} style={styles.previewAreaCard}>
                           <div style={styles.previewAreaTitle}>{area.name}</div>
 
                           {!hasContent && <div style={styles.noIssuesText}>No issues noted.</div>}
+
+                          {!!area.routineChecks.length && (
+                            <div style={styles.previewRoutineWrap}>
+                              <div style={styles.previewRoutineHeader}>Routine Checks</div>
+                              {area.routineChecks.map((check, idx) => (
+                                <div key={`${area.name}-check-${idx}`} style={styles.previewRoutineRow}>
+                                  <div>{check.itemName}</div>
+                                  <div
+                                    style={{
+                                      fontWeight: 700,
+                                      textAlign: "right",
+                                      color: check.status === "OK" ? "#86efac" : "#f87171",
+                                    }}
+                                  >
+                                    {check.status === "OK" ? "OK" : `Issue - ${check.issue}`}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
 
                           {!!area.issues.length && (
                             <div style={{ marginTop: 10 }}>
