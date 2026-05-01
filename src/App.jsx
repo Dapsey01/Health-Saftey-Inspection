@@ -165,13 +165,7 @@ function normalizeFormData(raw) {
 }
 
 function stripPhotosFromForm(form) {
-  const next = deepClone(form);
-  Object.values(next.areas).forEach((area) => {
-    Object.values(area.items).forEach((item) => {
-      item.photos = [];
-    });
-  });
-  return next;
+  return deepClone(form);
 }
 
 export default function App() {
@@ -199,7 +193,7 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stripPhotosFromForm(form)));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
     } catch (err) {
       console.warn("Auto-save skipped:", err);
     }
@@ -1245,36 +1239,15 @@ export default function App() {
             />
 
             <div style={styles.topButtonRow}>
-              <button
-                type="button"
-                style={styles.btnSecondary}
-                onMouseDown={press}
-                onMouseUp={release}
-                onMouseLeave={release}
-                onClick={newWalk}
-              >
+              <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={newWalk}>
                 New Walk
               </button>
 
-              <button
-                type="button"
-                style={styles.btnPrimary}
-                onMouseDown={press}
-                onMouseUp={release}
-                onMouseLeave={release}
-                onClick={saveWalk}
-              >
+              <button type="button" style={styles.btnPrimary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={saveWalk}>
                 Save Walk
               </button>
 
-              <button
-                type="button"
-                style={styles.btnSecondary}
-                onMouseDown={press}
-                onMouseUp={release}
-                onMouseLeave={release}
-                onClick={scrollToHistory}
-              >
+              <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={scrollToHistory}>
                 Walk History
               </button>
             </div>
@@ -1312,13 +1285,7 @@ export default function App() {
           <div>
             {STRUCTURE.map((group) => (
               <div key={group.floor} style={{ marginBottom: 16 }}>
-                <div
-                  style={
-                    group.building === "Separate"
-                      ? styles.floorHeaderPurple
-                      : styles.floorHeaderBlue
-                  }
-                >
+                <div style={group.building === "Separate" ? styles.floorHeaderPurple : styles.floorHeaderBlue}>
                   {group.floor}
                 </div>
 
@@ -1435,9 +1402,7 @@ export default function App() {
                                       }}
                                       value={data.engineerAction}
                                       disabled={!issueMode}
-                                      onChange={(e) =>
-                                        setItemField(area.name, item, "engineerAction", e.target.value)
-                                      }
+                                      onChange={(e) => setItemField(area.name, item, "engineerAction", e.target.value)}
                                     >
                                       <option value="">Engineer Action ▼</option>
                                       {ACTION_OPTIONS.map((opt) => (
@@ -1456,9 +1421,7 @@ export default function App() {
                                       }}
                                       value={data.engineerAction}
                                       disabled={!issueMode}
-                                      onChange={(e) =>
-                                        setItemField(area.name, item, "engineerAction", e.target.value)
-                                      }
+                                      onChange={(e) => setItemField(area.name, item, "engineerAction", e.target.value)}
                                     >
                                       <option value="">Engineer Action ▼</option>
                                       {ACTION_OPTIONS.map((opt) => (
@@ -1552,39 +1515,15 @@ export default function App() {
             <div style={styles.reportHeader}>Email Report Preview</div>
 
             <div style={styles.buttonBar}>
-              <button
-                type="button"
-                style={styles.btnSecondary}
-                onMouseDown={press}
-                onMouseUp={release}
-                onMouseLeave={release}
-                onClick={copyHtmlEmail}
-              >
+              <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={copyHtmlEmail}>
                 Copy for Desktop Outlook
               </button>
-
-              <button
-                type="button"
-                style={styles.btnSecondary}
-                onMouseDown={press}
-                onMouseUp={release}
-                onMouseLeave={release}
-                onClick={openOutlookDraft}
-              >
+              <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={openOutlookDraft}>
                 Open Outlook Draft
               </button>
-
-              <button
-                type="button"
-                style={styles.btnPrimary}
-                onMouseDown={press}
-                onMouseUp={release}
-                onMouseLeave={release}
-                onClick={downloadHtmlEmail}
-              >
+              <button type="button" style={styles.btnPrimary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={downloadHtmlEmail}>
                 Download for Mobile Outlook
               </button>
-
               {copyMessage ? <span style={styles.copyMessage}>{copyMessage}</span> : null}
             </div>
 
@@ -1750,25 +1689,11 @@ export default function App() {
               </div>
 
               <div style={styles.historyButtons}>
-                <button
-                  type="button"
-                  style={styles.btnPrimary}
-                  onMouseDown={press}
-                  onMouseUp={release}
-                  onMouseLeave={release}
-                  onClick={() => loadWalk(entry)}
-                >
+                <button type="button" style={styles.btnPrimary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={() => loadWalk(entry)}>
                   Open
                 </button>
 
-                <button
-                  type="button"
-                  style={styles.btnSecondary}
-                  onMouseDown={press}
-                  onMouseUp={release}
-                  onMouseLeave={release}
-                  onClick={() => deleteWalk(entry.id)}
-                >
+                <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={() => deleteWalk(entry.id)}>
                   Delete
                 </button>
               </div>
