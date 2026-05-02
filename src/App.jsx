@@ -101,6 +101,14 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+function formatTagDate(value) {
+  if (!value) return "";
+  const parts = value.split("-");
+  if (parts.length !== 3) return value;
+  const [year, month, day] = parts;
+  return `${Number(month)}/${Number(day)}/${String(year).slice(-2)}`;
+}
+
 function buildInitialState() {
   const state = {
     inspector: "",
@@ -365,6 +373,34 @@ export default function App() {
     }));
   }, [form]);
 
+  const hotsosTagIssues = useMemo(() => {
+    const tags = [];
+
+    STRUCTURE.forEach((group) => {
+      group.areas.forEach((area) => {
+        const areaItems = form.areas[area.name]?.items || {};
+        Object.entries(areaItems).forEach(([itemName, item]) => {
+          if (
+            item.status === "Issue" &&
+            item.engineerAction === "HOTSOS Logged" &&
+            String(item.hotsos || "").trim()
+          ) {
+            tags.push({
+              floor: group.floor,
+              area: area.name,
+              itemName,
+              issue: item.issue || "Issue logged",
+              hotsos: item.hotsos,
+              date: form.date,
+            });
+          }
+        });
+      });
+    });
+
+    return tags;
+  }, [form]);
+
   const issueCount = detailedReport.reduce(
     (sum, group) => sum + group.areas.reduce((inner, area) => inner + area.issues.length, 0),
     0
@@ -441,6 +477,141 @@ export default function App() {
     const el = document.getElementById("walk-history-section");
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
+  const hotsosTagsHtml = useMemo(() => {
+    const tagsHtml = hotsosTagIssues.length
+      ? hotsosTagIssues
+          .map(
+            (tag) => `
+              <section class="tag-page">
+                <div class="tag-card">
+                  <div class="item-name">${escapeHtml(tag.itemName).toUpperCase()}</div>
+                  <div class="out-of-order">OUT OF ORDER</div>
+                  <div class="hotsos">HotSOS #${escapeHtml(tag.hotsos)}</div>
+                  <div class="date">${escapeHtml(formatTagDate(tag.date))}</div>
+                  <div class="location">${escapeHtml(tag.area)} • ${escapeHtml(tag.floor)}</div>
+                  <div class="issue">${escapeHtml(tag.issue)}</div>
+                </div>
+              </section>
+            `
+          )
+          .join("")
+      : `
+          <section class="tag-page">
+            <div class="tag-card">
+              <div class="item-name">NO HOTSOS</div>
+              <div class="out-of-order">TAGS FOUND</div>
+              <div class="hotsos">No items currently have a HOTSOS # entered.</div>
+            </div>
+          </section>
+        `;
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>HOT SOS Tags</title>
+          <style>
+            @page {
+              size: letter portrait;
+              margin: 0.5in;
+            }
+
+            * {
+              box-sizing: border-box;
+            }
+
+            body {
+              margin: 0;
+              font-family: Arial, Helvetica, sans-serif;
+              background: #ffffff;
+              color: #000000;
+            }
+
+            .tag-page {
+              min-height: 10in;
+              page-break-after: always;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+
+            .tag-page:last-child {
+              page-break-after: auto;
+            }
+
+            .tag-card {
+              width: 7.5in;
+              min-height: 5.2in;
+              border: 3px solid #000000;
+              padding: 0.45in 0.35in;
+              text-align: center;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: center;
+            }
+
+            .item-name {
+              color: #e60000;
+              font-size: 54px;
+              line-height: 1.05;
+              font-weight: 900;
+              text-transform: uppercase;
+              margin-bottom: 32px;
+            }
+
+            .out-of-order {
+              color: #e60000;
+              font-size: 54px;
+              line-height: 1.05;
+              font-weight: 900;
+              text-transform: uppercase;
+              margin-bottom: 38px;
+            }
+
+            .hotsos {
+              font-size: 48px;
+              line-height: 1.15;
+              font-weight: 500;
+              margin-bottom: 36px;
+            }
+
+            .date {
+              font-size: 48px;
+              line-height: 1.15;
+              font-weight: 500;
+              margin-bottom: 24px;
+            }
+
+            .location {
+              font-size: 22px;
+              line-height: 1.3;
+              font-weight: 700;
+              margin-top: 10px;
+            }
+
+            .issue {
+              font-size: 18px;
+              line-height: 1.3;
+              margin-top: 8px;
+              color: #333333;
+            }
+
+            @media print {
+              body {
+                background: #ffffff;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${tagsHtml}
+        </body>
+      </html>
+    `;
+  }, [hotsosTagIssues]);
 
   const htmlEmail = useMemo(() => {
     const floorSummaryHtml = `
@@ -683,6 +854,24 @@ export default function App() {
     link.download = `cc-walk-report-${form.date || "draft"}.html`;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const downloadHotsosTags = () => {
+    const blob = new Blob([hotsosTagsHtml], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `hotsos-tags-${form.date || "draft"}.html`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    if (!hotsosTagIssues.length) {
+      setCopyMessage("No HOTSOS tags found.");
+    } else {
+      setCopyMessage(`Downloaded ${hotsosTagIssues.length} HOTSOS tag${hotsosTagIssues.length === 1 ? "" : "s"}.`);
+    }
+
+    setTimeout(() => setCopyMessage(""), 2500);
   };
 
   const styles = {
@@ -1239,15 +1428,36 @@ export default function App() {
             />
 
             <div style={styles.topButtonRow}>
-              <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={newWalk}>
+              <button
+                type="button"
+                style={styles.btnSecondary}
+                onMouseDown={press}
+                onMouseUp={release}
+                onMouseLeave={release}
+                onClick={newWalk}
+              >
                 New Walk
               </button>
 
-              <button type="button" style={styles.btnPrimary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={saveWalk}>
+              <button
+                type="button"
+                style={styles.btnPrimary}
+                onMouseDown={press}
+                onMouseUp={release}
+                onMouseLeave={release}
+                onClick={saveWalk}
+              >
                 Save Walk
               </button>
 
-              <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={scrollToHistory}>
+              <button
+                type="button"
+                style={styles.btnSecondary}
+                onMouseDown={press}
+                onMouseUp={release}
+                onMouseLeave={release}
+                onClick={scrollToHistory}
+              >
                 Walk History
               </button>
             </div>
@@ -1285,7 +1495,13 @@ export default function App() {
           <div>
             {STRUCTURE.map((group) => (
               <div key={group.floor} style={{ marginBottom: 16 }}>
-                <div style={group.building === "Separate" ? styles.floorHeaderPurple : styles.floorHeaderBlue}>
+                <div
+                  style={
+                    group.building === "Separate"
+                      ? styles.floorHeaderPurple
+                      : styles.floorHeaderBlue
+                  }
+                >
                   {group.floor}
                 </div>
 
@@ -1402,7 +1618,9 @@ export default function App() {
                                       }}
                                       value={data.engineerAction}
                                       disabled={!issueMode}
-                                      onChange={(e) => setItemField(area.name, item, "engineerAction", e.target.value)}
+                                      onChange={(e) =>
+                                        setItemField(area.name, item, "engineerAction", e.target.value)
+                                      }
                                     >
                                       <option value="">Engineer Action ▼</option>
                                       {ACTION_OPTIONS.map((opt) => (
@@ -1421,7 +1639,9 @@ export default function App() {
                                       }}
                                       value={data.engineerAction}
                                       disabled={!issueMode}
-                                      onChange={(e) => setItemField(area.name, item, "engineerAction", e.target.value)}
+                                      onChange={(e) =>
+                                        setItemField(area.name, item, "engineerAction", e.target.value)
+                                      }
                                     >
                                       <option value="">Engineer Action ▼</option>
                                       {ACTION_OPTIONS.map((opt) => (
@@ -1515,15 +1735,50 @@ export default function App() {
             <div style={styles.reportHeader}>Email Report Preview</div>
 
             <div style={styles.buttonBar}>
-              <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={copyHtmlEmail}>
+              <button
+                type="button"
+                style={styles.btnSecondary}
+                onMouseDown={press}
+                onMouseUp={release}
+                onMouseLeave={release}
+                onClick={copyHtmlEmail}
+              >
                 Copy for Desktop Outlook
               </button>
-              <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={openOutlookDraft}>
+
+              <button
+                type="button"
+                style={styles.btnSecondary}
+                onMouseDown={press}
+                onMouseUp={release}
+                onMouseLeave={release}
+                onClick={openOutlookDraft}
+              >
                 Open Outlook Draft
               </button>
-              <button type="button" style={styles.btnPrimary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={downloadHtmlEmail}>
-                Download for Mobile Outlook
+
+              <button
+                type="button"
+                style={styles.btnPrimary}
+                onMouseDown={press}
+                onMouseUp={release}
+                onMouseLeave={release}
+                onClick={downloadHtmlEmail}
+              >
+                Download Report
               </button>
+
+              <button
+                type="button"
+                style={styles.btnPrimary}
+                onMouseDown={press}
+                onMouseUp={release}
+                onMouseLeave={release}
+                onClick={downloadHotsosTags}
+              >
+                Download HOTSOS Tags
+              </button>
+
               {copyMessage ? <span style={styles.copyMessage}>{copyMessage}</span> : null}
             </div>
 
@@ -1535,6 +1790,7 @@ export default function App() {
                   <div><strong>Date:</strong> {form.date || "—"}</div>
                   <div><strong>Time:</strong> {form.time || "—"}</div>
                   <div><strong>Subject:</strong> {reportSubject}</div>
+                  <div><strong>Printable HOTSOS Tags:</strong> {hotsosTagIssues.length}</div>
                 </div>
               </div>
 
@@ -1689,11 +1945,25 @@ export default function App() {
               </div>
 
               <div style={styles.historyButtons}>
-                <button type="button" style={styles.btnPrimary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={() => loadWalk(entry)}>
+                <button
+                  type="button"
+                  style={styles.btnPrimary}
+                  onMouseDown={press}
+                  onMouseUp={release}
+                  onMouseLeave={release}
+                  onClick={() => loadWalk(entry)}
+                >
                   Open
                 </button>
 
-                <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={() => deleteWalk(entry.id)}>
+                <button
+                  type="button"
+                  style={styles.btnSecondary}
+                  onMouseDown={press}
+                  onMouseUp={release}
+                  onMouseLeave={release}
+                  onClick={() => deleteWalk(entry.id)}
+                >
                   Delete
                 </button>
               </div>
