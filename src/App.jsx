@@ -109,6 +109,21 @@ function formatTagDate(value) {
   return `${Number(month)}/${Number(day)}/${String(year).slice(-2)}`;
 }
 
+function formatTagTime(value) {
+  if (!value) return "";
+  const parts = value.split(":");
+  if (parts.length < 2) return value;
+
+  let hour = Number(parts[0]);
+  const minute = parts[1];
+  const suffix = hour >= 12 ? "PM" : "AM";
+
+  hour = hour % 12;
+  if (hour === 0) hour = 12;
+
+  return `${hour}:${minute} ${suffix}`;
+}
+
 function buildInitialState() {
   const state = {
     inspector: "",
@@ -392,6 +407,7 @@ export default function App() {
               issue: item.issue || "Issue logged",
               hotsos: item.hotsos,
               date: form.date,
+              time: form.time,
             });
           }
         });
@@ -489,6 +505,7 @@ export default function App() {
                   <div class="out-of-order">OUT OF ORDER</div>
                   <div class="hotsos">HotSOS #${escapeHtml(tag.hotsos)}</div>
                   <div class="date">${escapeHtml(formatTagDate(tag.date))}</div>
+                  <div class="time">${escapeHtml(formatTagTime(tag.time))}</div>
                   <div class="location">${escapeHtml(tag.area)} • ${escapeHtml(tag.floor)}</div>
                   <div class="issue">${escapeHtml(tag.issue)}</div>
                 </div>
@@ -545,7 +562,7 @@ export default function App() {
               width: 7.5in;
               min-height: 5.2in;
               border: 3px solid #000000;
-              padding: 0.45in 0.35in;
+              padding: 0.42in 0.35in;
               text-align: center;
               display: flex;
               flex-direction: column;
@@ -559,7 +576,7 @@ export default function App() {
               line-height: 1.05;
               font-weight: 900;
               text-transform: uppercase;
-              margin-bottom: 32px;
+              margin-bottom: 26px;
             }
 
             .out-of-order {
@@ -568,28 +585,35 @@ export default function App() {
               line-height: 1.05;
               font-weight: 900;
               text-transform: uppercase;
-              margin-bottom: 38px;
+              margin-bottom: 34px;
             }
 
             .hotsos {
               font-size: 48px;
               line-height: 1.15;
               font-weight: 500;
-              margin-bottom: 36px;
+              margin-bottom: 28px;
             }
 
             .date {
-              font-size: 48px;
+              font-size: 46px;
               line-height: 1.15;
               font-weight: 500;
-              margin-bottom: 24px;
+              margin-bottom: 10px;
+            }
+
+            .time {
+              font-size: 42px;
+              line-height: 1.15;
+              font-weight: 500;
+              margin-bottom: 22px;
             }
 
             .location {
               font-size: 22px;
               line-height: 1.3;
               font-weight: 700;
-              margin-top: 10px;
+              margin-top: 6px;
             }
 
             .issue {
@@ -768,7 +792,7 @@ export default function App() {
                           <tr>
                             <td style="font-size:14px;color:#374151;padding:0 12px 0 0;"><strong>Inspector:</strong> ${escapeHtml(form.inspector || "—")}</td>
                             <td style="font-size:14px;color:#374151;padding:0 12px;"><strong>Date:</strong> ${escapeHtml(form.date || "—")}</td>
-                            <td style="font-size:14px;color:#374151;padding:0 0 0 12px;"><strong>Time:</strong> ${escapeHtml(form.time || "—")}</td>
+                            <td style="font-size:14px;color:#374151;padding:0 0 0 12px;"><strong>Time:</strong> ${escapeHtml(formatTagTime(form.time) || form.time || "—")}</td>
                           </tr>
                           <tr>
                             <td colspan="3" style="font-size:13px;color:#64748b;padding-top:10px;"><strong>Subject:</strong> ${escapeHtml(reportSubject)}</td>
@@ -832,7 +856,7 @@ export default function App() {
       setCopyMessage("Copied! Paste into Outlook.");
       setTimeout(() => setCopyMessage(""), 2500);
     } catch {
-      setCopyMessage("Copy failed on this browser. Use Download for Mobile Outlook.");
+      setCopyMessage("Copy failed on this browser. Use Download Report.");
       setTimeout(() => setCopyMessage(""), 3000);
     }
   };
@@ -875,518 +899,76 @@ export default function App() {
   };
 
   const styles = {
-    page: {
-      background: "#020617",
-      minHeight: "100vh",
-      padding: 12,
-      fontFamily: "Arial, sans-serif",
-    },
-    container: {
-      maxWidth: 1100,
-      margin: "0 auto",
-    },
-    card: {
-      background: "#334155",
-      border: "1px solid #1f2937",
-      borderRadius: 18,
-      overflow: "hidden",
-      marginBottom: 14,
-    },
-    topHeader: {
-      background: "#1e3a8a",
-      color: "#ffffff",
-      fontWeight: "bold",
-      fontSize: 22,
-      padding: "16px 18px",
-      borderBottom: "1px solid #3b82f6",
-      boxShadow: "0 0 10px rgba(59,130,246,0.3)",
-    },
-    topFields: {
-      display: "grid",
-      gap: 10,
-      padding: 14,
-    },
-    topButtonRow: {
-      display: "flex",
-      gap: 12,
-      marginTop: 10,
-      flexWrap: "wrap",
-    },
-    input: {
-      width: "100%",
-      padding: 14,
-      borderRadius: 18,
-      border: "1px solid #334155",
-      fontSize: 18,
-      fontWeight: 600,
-      boxSizing: "border-box",
-      background: "linear-gradient(145deg, #475569, #1e293b)",
-      color: "#ffffff",
-      boxShadow:
-        "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)",
-      outline: "none",
-    },
-    textarea: {
-      width: "100%",
-      minHeight: 95,
-      padding: 14,
-      borderRadius: 18,
-      border: "1px solid #334155",
-      fontSize: 15,
-      boxSizing: "border-box",
-      background: "linear-gradient(145deg, #475569, #1e293b)",
-      color: "#ffffff",
-      boxShadow:
-        "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)",
-      outline: "none",
-    },
-    select: {
-      width: "100%",
-      padding: 14,
-      borderRadius: 18,
-      border: "1px solid #334155",
-      fontSize: 15,
-      fontWeight: 600,
-      boxSizing: "border-box",
-      background: "linear-gradient(145deg, #475569, #1e293b)",
-      color: "#ffffff",
-      boxShadow:
-        "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)",
-      outline: "none",
-    },
-    disabled: {
-      opacity: 0.55,
-    },
-    tempAlert: {
-      border: "1px solid #ef4444",
-      background: "#450a0a",
-      color: "#fecaca",
-    },
-    sectionTitle: {
-      fontWeight: "bold",
-      fontSize: 19,
-      padding: "14px 16px 8px",
-      color: "#ffffff",
-    },
-    mainStack: {
-      display: "grid",
-      gridTemplateColumns: "1fr",
-      gap: 16,
-    },
-    floorHeaderBlue: {
-      marginBottom: 8,
-      padding: "12px 14px",
-      background: "#1e3a8a",
-      color: "#ffffff",
-      borderRadius: 10,
-      fontWeight: "bold",
-      boxShadow: "0 0 10px rgba(59,130,246,0.3)",
-    },
-    floorHeaderPurple: {
-      marginBottom: 8,
-      padding: "12px 14px",
-      background: "#6d28d9",
-      color: "#ffffff",
-      borderRadius: 10,
-      fontWeight: "bold",
-    },
-    pantryTile: {
-      width: "100%",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: "14px 16px",
-      marginBottom: 10,
-      background: "linear-gradient(145deg, #475569, #334155)",
-      border: "1px solid #334155",
-      borderRadius: 18,
-      fontWeight: 700,
-      fontSize: 18,
-      cursor: "pointer",
-      color: "#f8fafc",
-      boxShadow:
-        "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.18), inset 0 2px 0 rgba(255,255,255,0.12)",
-    },
-    chevron: {
-      color: "#93c5fd",
-      fontSize: 13,
-    },
-    areaBody: {
-      background: "#111827",
-      border: "1px solid #1f2937",
-      borderRadius: 14,
-      padding: 12,
-      marginTop: -2,
-      marginBottom: 8,
-    },
-    itemCard: {
-      border: "1px solid #1f2937",
-      background: "#020617",
-      borderRadius: 12,
-      padding: 12,
-      marginBottom: 12,
-    },
-    itemTitle: {
-      fontWeight: 700,
-      marginBottom: 10,
-      color: "#f8fafc",
-    },
-    twoColGrid: {
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: 8,
-    },
-    smallLabel: {
-      fontSize: 13,
-      fontWeight: 600,
-      color: "#cbd5e1",
-      marginBottom: 6,
-    },
-    photoRow: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: 8,
-      marginTop: 8,
-      alignItems: "flex-start",
-    },
-    thumb: {
-      width: 64,
-      height: 64,
-      objectFit: "cover",
-      borderRadius: 10,
-      border: "1px solid #334155",
-      display: "block",
-      marginBottom: 6,
-    },
-    outOfRangeNote: {
-      marginTop: 10,
-      display: "inline-block",
-      padding: "6px 10px",
-      borderRadius: 999,
-      background: "#7f1d1d",
-      color: "#fecaca",
-      fontSize: 12,
-      fontWeight: "bold",
-    },
-    btnPrimary: {
-      padding: "14px 22px",
-      minWidth: 120,
-      textAlign: "center",
-      borderRadius: 999,
-      border: "1px solid #1e3a8a",
-      background: "linear-gradient(145deg, #60a5fa, #1d4ed8)",
-      color: "#ffffff",
-      fontWeight: 800,
-      cursor: "pointer",
-      boxShadow:
-        "0 8px 18px rgba(0,0,0,0.5), 0 0 18px rgba(59,130,246,0.9), inset 0 2px 0 rgba(255,255,255,0.3)",
-      transition: "all 0.15s ease",
-    },
-    btnSecondary: {
-      padding: "14px 22px",
-      minWidth: 120,
-      textAlign: "center",
-      borderRadius: 999,
-      border: "1px solid #334155",
-      background: "linear-gradient(145deg, #475569, #1e293b)",
-      color: "#ffffff",
-      fontWeight: 700,
-      cursor: "pointer",
-      boxShadow:
-        "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.4), inset 0 2px 0 rgba(255,255,255,0.2)",
-      transition: "all 0.15s ease",
-    },
-    reportHeader: {
-      background: "#0f172a",
-      color: "#fff",
-      fontWeight: "bold",
-      fontSize: 20,
-      padding: "16px 18px",
-    },
-    buttonBar: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: 8,
-      alignItems: "center",
-      padding: "12px 14px",
-      borderBottom: "1px solid #1f2937",
-    },
-    copyMessage: {
-      fontSize: 14,
-      fontWeight: 600,
-      color: "#cbd5e1",
-    },
-    previewScroll: {
-      padding: 14,
-      maxHeight: "80vh",
-      overflow: "auto",
-      background: "#334155",
-    },
-    previewIntroCard: {
-      border: "1px solid #1f2937",
-      background: "#1e293b",
-      borderRadius: 18,
-      padding: 16,
-      marginBottom: 14,
-    },
-    previewTitle: {
-      fontSize: 20,
-      fontWeight: "bold",
-      color: "#ffffff",
-    },
-    previewMetaGrid: {
-      display: "grid",
-      gap: 8,
-      marginTop: 10,
-      color: "#e2e8f0",
-    },
-    statsGrid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-      gap: 10,
-      marginBottom: 14,
-    },
-    statCard: {
-      border: "1px solid #1f2937",
-      borderRadius: 18,
-      padding: 16,
-      background: "#1e293b",
-    },
-    statLabel: {
-      fontSize: 11,
-      fontWeight: "bold",
-      letterSpacing: ".06em",
-      textTransform: "uppercase",
-      color: "#cbd5e1",
-    },
-    statNumber: {
-      marginTop: 8,
-      fontSize: 34,
-      fontWeight: "bold",
-      color: "#ffffff",
-    },
-    statSmall: {
-      marginTop: 8,
-      fontSize: 14,
-      fontWeight: 700,
-      color: "#ffffff",
-    },
-    previewSummaryCard: {
-      overflow: "hidden",
-      borderRadius: 18,
-      border: "1px solid #1f2937",
-      background: "#334155",
-      marginBottom: 14,
-    },
-    previewSummaryHeader: {
-      padding: "14px 16px",
-      fontWeight: "bold",
-      background: "#0f172a",
-      color: "#ffffff",
-    },
-    previewSummaryGrid: {
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: 10,
-      padding: 14,
-    },
-    previewSummaryCol: {
-      display: "grid",
-      gap: 10,
-    },
-    previewSummaryRow: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      gap: 8,
-      border: "1px solid #334155",
-      borderRadius: 12,
-      padding: "12px 14px",
-      background: "#1e293b",
-    },
-    previewClear: {
-      color: "#86efac",
-      fontWeight: "bold",
-      fontSize: 13,
-    },
-    previewIssue: {
-      color: "#f87171",
-      fontWeight: "bold",
-      fontSize: 13,
-    },
-    previewGroupCard: {
-      overflow: "hidden",
-      borderRadius: 18,
-      border: "1px solid #1f2937",
-      background: "#334155",
-      marginBottom: 14,
-    },
-    previewGroupHeader: {
-      padding: "14px 16px",
-      fontWeight: "bold",
-      color: "#ffffff",
-    },
-    previewGroupBody: {
-      padding: 14,
-      display: "grid",
-      gap: 12,
-    },
-    previewAreaCard: {
-      border: "1px solid #1f2937",
-      borderRadius: 16,
-      background: "#1e293b",
-      padding: 14,
-    },
-    previewAreaTitle: {
-      fontSize: 18,
-      fontWeight: "bold",
-      color: "#ffffff",
-      marginBottom: 8,
-    },
-    noIssuesText: {
-      fontSize: 14,
-      color: "#cbd5e1",
-    },
-    previewRoutineWrap: {
-      marginTop: 10,
-      overflow: "hidden",
-      border: "1px solid #334155",
-      borderRadius: 12,
-      background: "#111827",
-    },
-    previewRoutineHeader: {
-      background: "#0f172a",
-      padding: "10px 12px",
-      fontSize: 12,
-      fontWeight: "bold",
-      textTransform: "uppercase",
-      color: "#cbd5e1",
-    },
-    previewRoutineRow: {
-      display: "grid",
-      gridTemplateColumns: "1.4fr 1fr",
-      gap: 8,
-      padding: "10px 12px",
-      borderTop: "1px solid #334155",
-      color: "#f8fafc",
-      fontSize: 14,
-    },
-    previewIssueCard: {
-      display: "grid",
-      gridTemplateColumns: "1fr 110px",
-      gap: 12,
-      border: "1px solid #7f1d1d",
-      borderRadius: 14,
-      background: "#111827",
-      padding: 12,
-      marginBottom: 10,
-      color: "#ffffff",
-    },
-    issueBadges: {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: 6,
-      marginTop: 8,
-    },
-    tempBadge: {
-      background: "#78350f",
-      color: "#fde68a",
-      fontSize: 12,
-      fontWeight: "bold",
-      borderRadius: 999,
-      padding: "4px 8px",
-    },
-    grayBadge: {
-      background: "#334155",
-      color: "#e2e8f0",
-      fontSize: 12,
-      fontWeight: "bold",
-      borderRadius: 999,
-      padding: "4px 8px",
-    },
-    redBadge: {
-      background: "#7f1d1d",
-      color: "#fecaca",
-      fontSize: 12,
-      fontWeight: "bold",
-      borderRadius: 999,
-      padding: "4px 8px",
-    },
-    previewIssueImage: {
-      width: 110,
-      height: 96,
-      objectFit: "cover",
-      borderRadius: 12,
-      border: "1px solid #334155",
-    },
-    noPhotoBox: {
-      width: 110,
-      height: 96,
-      borderRadius: 12,
-      border: "1px dashed #475569",
-      color: "#94a3b8",
-      fontSize: 12,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    tempTableWrap: {
-      marginTop: 14,
-      overflow: "hidden",
-      border: "1px solid #334155",
-      borderRadius: 12,
-      background: "#111827",
-    },
-    tempTableHeaderRow: {
-      display: "grid",
-      gridTemplateColumns: "1.5fr 1fr",
-      background: "#0f172a",
-      padding: "10px 12px",
-      fontSize: 12,
-      fontWeight: "bold",
-      textTransform: "uppercase",
-      color: "#cbd5e1",
-    },
-    tempTableRow: {
-      display: "grid",
-      gridTemplateColumns: "1.5fr 1fr",
-      padding: "10px 12px",
-      borderTop: "1px solid #334155",
-      fontSize: 14,
-      color: "#f8fafc",
-    },
-    notesBox: {
-      marginTop: 14,
-      border: "1px solid #334155",
-      borderRadius: 12,
-      background: "#111827",
-      padding: 12,
-      fontSize: 14,
-      color: "#cbd5e1",
-    },
-    historyWrap: {
-      display: "grid",
-      gap: 10,
-      marginTop: 14,
-    },
-    historyItem: {
-      border: "1px solid #334155",
-      padding: 12,
-      borderRadius: 14,
-      background: "#1e293b",
-      color: "#ffffff",
-    },
-    historyMeta: {
-      color: "#cbd5e1",
-      fontSize: 13,
-      marginBottom: 8,
-    },
-    historyButtons: {
-      display: "flex",
-      gap: 10,
-      marginTop: 8,
-      flexWrap: "wrap",
-    },
+    page: { background: "#020617", minHeight: "100vh", padding: 12, fontFamily: "Arial, sans-serif" },
+    container: { maxWidth: 1100, margin: "0 auto" },
+    card: { background: "#334155", border: "1px solid #1f2937", borderRadius: 18, overflow: "hidden", marginBottom: 14 },
+    topHeader: { background: "#1e3a8a", color: "#ffffff", fontWeight: "bold", fontSize: 22, padding: "16px 18px", borderBottom: "1px solid #3b82f6", boxShadow: "0 0 10px rgba(59,130,246,0.3)" },
+    topFields: { display: "grid", gap: 10, padding: 14 },
+    topButtonRow: { display: "flex", gap: 12, marginTop: 10, flexWrap: "wrap" },
+    input: { width: "100%", padding: 14, borderRadius: 18, border: "1px solid #334155", fontSize: 18, fontWeight: 600, boxSizing: "border-box", background: "linear-gradient(145deg, #475569, #1e293b)", color: "#ffffff", boxShadow: "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)", outline: "none" },
+    textarea: { width: "100%", minHeight: 95, padding: 14, borderRadius: 18, border: "1px solid #334155", fontSize: 15, boxSizing: "border-box", background: "linear-gradient(145deg, #475569, #1e293b)", color: "#ffffff", boxShadow: "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)", outline: "none" },
+    select: { width: "100%", padding: 14, borderRadius: 18, border: "1px solid #334155", fontSize: 15, fontWeight: 600, boxSizing: "border-box", background: "linear-gradient(145deg, #475569, #1e293b)", color: "#ffffff", boxShadow: "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)", outline: "none" },
+    disabled: { opacity: 0.55 },
+    tempAlert: { border: "1px solid #ef4444", background: "#450a0a", color: "#fecaca" },
+    sectionTitle: { fontWeight: "bold", fontSize: 19, padding: "14px 16px 8px", color: "#ffffff" },
+    mainStack: { display: "grid", gridTemplateColumns: "1fr", gap: 16 },
+    floorHeaderBlue: { marginBottom: 8, padding: "12px 14px", background: "#1e3a8a", color: "#ffffff", borderRadius: 10, fontWeight: "bold", boxShadow: "0 0 10px rgba(59,130,246,0.3)" },
+    floorHeaderPurple: { marginBottom: 8, padding: "12px 14px", background: "#6d28d9", color: "#ffffff", borderRadius: 10, fontWeight: "bold" },
+    pantryTile: { width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", marginBottom: 10, background: "linear-gradient(145deg, #475569, #334155)", border: "1px solid #334155", borderRadius: 18, fontWeight: 700, fontSize: 18, cursor: "pointer", color: "#f8fafc", boxShadow: "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.18), inset 0 2px 0 rgba(255,255,255,0.12)" },
+    chevron: { color: "#93c5fd", fontSize: 13 },
+    areaBody: { background: "#111827", border: "1px solid #1f2937", borderRadius: 14, padding: 12, marginTop: -2, marginBottom: 8 },
+    itemCard: { border: "1px solid #1f2937", background: "#020617", borderRadius: 12, padding: 12, marginBottom: 12 },
+    itemTitle: { fontWeight: 700, marginBottom: 10, color: "#f8fafc" },
+    twoColGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 },
+    smallLabel: { fontSize: 13, fontWeight: 600, color: "#cbd5e1", marginBottom: 6 },
+    photoRow: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8, alignItems: "flex-start" },
+    thumb: { width: 64, height: 64, objectFit: "cover", borderRadius: 10, border: "1px solid #334155", display: "block", marginBottom: 6 },
+    outOfRangeNote: { marginTop: 10, display: "inline-block", padding: "6px 10px", borderRadius: 999, background: "#7f1d1d", color: "#fecaca", fontSize: 12, fontWeight: "bold" },
+    btnPrimary: { padding: "14px 22px", minWidth: 120, textAlign: "center", borderRadius: 999, border: "1px solid #1e3a8a", background: "linear-gradient(145deg, #60a5fa, #1d4ed8)", color: "#ffffff", fontWeight: 800, cursor: "pointer", boxShadow: "0 8px 18px rgba(0,0,0,0.5), 0 0 18px rgba(59,130,246,0.9), inset 0 2px 0 rgba(255,255,255,0.3)", transition: "all 0.15s ease" },
+    btnSecondary: { padding: "14px 22px", minWidth: 120, textAlign: "center", borderRadius: 999, border: "1px solid #334155", background: "linear-gradient(145deg, #475569, #1e293b)", color: "#ffffff", fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.4), inset 0 2px 0 rgba(255,255,255,0.2)", transition: "all 0.15s ease" },
+    reportHeader: { background: "#0f172a", color: "#fff", fontWeight: "bold", fontSize: 20, padding: "16px 18px" },
+    buttonBar: { display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "12px 14px", borderBottom: "1px solid #1f2937" },
+    copyMessage: { fontSize: 14, fontWeight: 600, color: "#cbd5e1" },
+    previewScroll: { padding: 14, maxHeight: "80vh", overflow: "auto", background: "#334155" },
+    previewIntroCard: { border: "1px solid #1f2937", background: "#1e293b", borderRadius: 18, padding: 16, marginBottom: 14 },
+    previewTitle: { fontSize: 20, fontWeight: "bold", color: "#ffffff" },
+    previewMetaGrid: { display: "grid", gap: 8, marginTop: 10, color: "#e2e8f0" },
+    statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginBottom: 14 },
+    statCard: { border: "1px solid #1f2937", borderRadius: 18, padding: 16, background: "#1e293b" },
+    statLabel: { fontSize: 11, fontWeight: "bold", letterSpacing: ".06em", textTransform: "uppercase", color: "#cbd5e1" },
+    statNumber: { marginTop: 8, fontSize: 34, fontWeight: "bold", color: "#ffffff" },
+    statSmall: { marginTop: 8, fontSize: 14, fontWeight: 700, color: "#ffffff" },
+    previewSummaryCard: { overflow: "hidden", borderRadius: 18, border: "1px solid #1f2937", background: "#334155", marginBottom: 14 },
+    previewSummaryHeader: { padding: "14px 16px", fontWeight: "bold", background: "#0f172a", color: "#ffffff" },
+    previewSummaryGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: 14 },
+    previewSummaryCol: { display: "grid", gap: 10 },
+    previewSummaryRow: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, border: "1px solid #334155", borderRadius: 12, padding: "12px 14px", background: "#1e293b" },
+    previewClear: { color: "#86efac", fontWeight: "bold", fontSize: 13 },
+    previewIssue: { color: "#f87171", fontWeight: "bold", fontSize: 13 },
+    previewGroupCard: { overflow: "hidden", borderRadius: 18, border: "1px solid #1f2937", background: "#334155", marginBottom: 14 },
+    previewGroupHeader: { padding: "14px 16px", fontWeight: "bold", color: "#ffffff" },
+    previewGroupBody: { padding: 14, display: "grid", gap: 12 },
+    previewAreaCard: { border: "1px solid #1f2937", borderRadius: 16, background: "#1e293b", padding: 14 },
+    previewAreaTitle: { fontSize: 18, fontWeight: "bold", color: "#ffffff", marginBottom: 8 },
+    noIssuesText: { fontSize: 14, color: "#cbd5e1" },
+    previewRoutineWrap: { marginTop: 10, overflow: "hidden", border: "1px solid #334155", borderRadius: 12, background: "#111827" },
+    previewRoutineHeader: { background: "#0f172a", padding: "10px 12px", fontSize: 12, fontWeight: "bold", textTransform: "uppercase", color: "#cbd5e1" },
+    previewRoutineRow: { display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 8, padding: "10px 12px", borderTop: "1px solid #334155", color: "#f8fafc", fontSize: 14 },
+    previewIssueCard: { display: "grid", gridTemplateColumns: "1fr 110px", gap: 12, border: "1px solid #7f1d1d", borderRadius: 14, background: "#111827", padding: 12, marginBottom: 10, color: "#ffffff" },
+    issueBadges: { display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 },
+    tempBadge: { background: "#78350f", color: "#fde68a", fontSize: 12, fontWeight: "bold", borderRadius: 999, padding: "4px 8px" },
+    grayBadge: { background: "#334155", color: "#e2e8f0", fontSize: 12, fontWeight: "bold", borderRadius: 999, padding: "4px 8px" },
+    redBadge: { background: "#7f1d1d", color: "#fecaca", fontSize: 12, fontWeight: "bold", borderRadius: 999, padding: "4px 8px" },
+    previewIssueImage: { width: 110, height: 96, objectFit: "cover", borderRadius: 12, border: "1px solid #334155" },
+    noPhotoBox: { width: 110, height: 96, borderRadius: 12, border: "1px dashed #475569", color: "#94a3b8", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" },
+    tempTableWrap: { marginTop: 14, overflow: "hidden", border: "1px solid #334155", borderRadius: 12, background: "#111827" },
+    tempTableHeaderRow: { display: "grid", gridTemplateColumns: "1.5fr 1fr", background: "#0f172a", padding: "10px 12px", fontSize: 12, fontWeight: "bold", textTransform: "uppercase", color: "#cbd5e1" },
+    tempTableRow: { display: "grid", gridTemplateColumns: "1.5fr 1fr", padding: "10px 12px", borderTop: "1px solid #334155", fontSize: 14, color: "#f8fafc" },
+    notesBox: { marginTop: 14, border: "1px solid #334155", borderRadius: 12, background: "#111827", padding: 12, fontSize: 14, color: "#cbd5e1" },
+    historyWrap: { display: "grid", gap: 10, marginTop: 14 },
+    historyItem: { border: "1px solid #334155", padding: 12, borderRadius: 14, background: "#1e293b", color: "#ffffff" },
+    historyMeta: { color: "#cbd5e1", fontSize: 13, marginBottom: 8 },
+    historyButtons: { display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" },
   };
 
   const press = (e) => {
@@ -1406,60 +988,14 @@ export default function App() {
           <div style={styles.topHeader}>Conference Center Health & Safety Walk</div>
 
           <div style={styles.topFields}>
-            <input
-              style={styles.input}
-              placeholder="Inspector"
-              value={form.inspector}
-              onChange={(e) => setTopField("inspector", e.target.value)}
-            />
-
-            <input
-              style={styles.input}
-              type="date"
-              value={form.date}
-              onChange={(e) => setTopField("date", e.target.value)}
-            />
-
-            <input
-              style={styles.input}
-              type="time"
-              value={form.time}
-              onChange={(e) => setTopField("time", e.target.value)}
-            />
+            <input style={styles.input} placeholder="Inspector" value={form.inspector} onChange={(e) => setTopField("inspector", e.target.value)} />
+            <input style={styles.input} type="date" value={form.date} onChange={(e) => setTopField("date", e.target.value)} />
+            <input style={styles.input} type="time" value={form.time} onChange={(e) => setTopField("time", e.target.value)} />
 
             <div style={styles.topButtonRow}>
-              <button
-                type="button"
-                style={styles.btnSecondary}
-                onMouseDown={press}
-                onMouseUp={release}
-                onMouseLeave={release}
-                onClick={newWalk}
-              >
-                New Walk
-              </button>
-
-              <button
-                type="button"
-                style={styles.btnPrimary}
-                onMouseDown={press}
-                onMouseUp={release}
-                onMouseLeave={release}
-                onClick={saveWalk}
-              >
-                Save Walk
-              </button>
-
-              <button
-                type="button"
-                style={styles.btnSecondary}
-                onMouseDown={press}
-                onMouseUp={release}
-                onMouseLeave={release}
-                onClick={scrollToHistory}
-              >
-                Walk History
-              </button>
+              <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={newWalk}>New Walk</button>
+              <button type="button" style={styles.btnPrimary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={saveWalk}>Save Walk</button>
+              <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={scrollToHistory}>Walk History</button>
             </div>
           </div>
         </div>
@@ -1471,9 +1007,7 @@ export default function App() {
               {previewLeft.map((f) => (
                 <div key={`top-left-${f.floor}`} style={styles.previewSummaryRow}>
                   <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
-                  <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
-                    {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
-                  </div>
+                  <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>{f.issues === 0 ? "Clear" : `${f.issues} Issues`}</div>
                 </div>
               ))}
             </div>
@@ -1482,9 +1016,7 @@ export default function App() {
               {previewRight.map((f) => (
                 <div key={`top-right-${f.floor}`} style={styles.previewSummaryRow}>
                   <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
-                  <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
-                    {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
-                  </div>
+                  <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>{f.issues === 0 ? "Clear" : `${f.issues} Issues`}</div>
                 </div>
               ))}
             </div>
@@ -1495,27 +1027,13 @@ export default function App() {
           <div>
             {STRUCTURE.map((group) => (
               <div key={group.floor} style={{ marginBottom: 16 }}>
-                <div
-                  style={
-                    group.building === "Separate"
-                      ? styles.floorHeaderPurple
-                      : styles.floorHeaderBlue
-                  }
-                >
-                  {group.floor}
-                </div>
+                <div style={group.building === "Separate" ? styles.floorHeaderPurple : styles.floorHeaderBlue}>{group.floor}</div>
 
                 {group.areas.map((area) => {
                   const isOpen = openAreaName === area.name;
 
                   return (
-                    <div
-                      key={area.name}
-                      style={{ marginBottom: 10 }}
-                      ref={(el) => {
-                        areaRefs.current[area.name] = el;
-                      }}
-                    >
+                    <div key={area.name} style={{ marginBottom: 10 }} ref={(el) => { areaRefs.current[area.name] = el; }}>
                       <button
                         type="button"
                         onMouseDown={press}
@@ -1545,118 +1063,67 @@ export default function App() {
                                 <div style={styles.itemTitle}>{item}</div>
 
                                 <div style={styles.twoColGrid}>
-                                  <select
-                                    style={styles.select}
-                                    value={data.status}
-                                    onChange={(e) => setItemField(area.name, item, "status", e.target.value)}
-                                  >
+                                  <select style={styles.select} value={data.status} onChange={(e) => setItemField(area.name, item, "status", e.target.value)}>
                                     <option value="">Status ▼</option>
-                                    {STATUS_OPTIONS.map((opt) => (
-                                      <option key={opt} value={opt}>
-                                        {opt}
-                                      </option>
-                                    ))}
+                                    {STATUS_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                                   </select>
 
                                   {isTempItem(item) ? (
                                     <select
-                                      style={{
-                                        ...styles.select,
-                                        ...(isOutOfRange(data.temperature) ? styles.tempAlert : {}),
-                                      }}
+                                      style={{ ...styles.select, ...(isOutOfRange(data.temperature) ? styles.tempAlert : {}) }}
                                       value={data.temperature}
                                       onChange={(e) => setItemField(area.name, item, "temperature", e.target.value)}
                                     >
                                       <option value="">Temp °F ▼</option>
-                                      {tempValues().map((t) => (
-                                        <option key={t} value={t}>
-                                          {t}°F
-                                        </option>
-                                      ))}
+                                      {tempValues().map((t) => <option key={t} value={t}>{t}°F</option>)}
                                     </select>
                                   ) : (
                                     <select
-                                      style={{
-                                        ...styles.select,
-                                        ...(!issueMode ? styles.disabled : {}),
-                                      }}
+                                      style={{ ...styles.select, ...(!issueMode ? styles.disabled : {}) }}
                                       value={data.issue}
                                       disabled={!issueMode}
                                       onChange={(e) => setItemField(area.name, item, "issue", e.target.value)}
                                     >
                                       <option value="">Issue ▼</option>
-                                      {getIssueOptions(item).map((opt) => (
-                                        <option key={opt} value={opt}>
-                                          {opt}
-                                        </option>
-                                      ))}
+                                      {getIssueOptions(item).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                                     </select>
                                   )}
 
                                   {isTempItem(item) ? (
                                     <select
-                                      style={{
-                                        ...styles.select,
-                                        ...(!issueMode ? styles.disabled : {}),
-                                      }}
+                                      style={{ ...styles.select, ...(!issueMode ? styles.disabled : {}) }}
                                       value={data.issue}
                                       disabled={!issueMode}
                                       onChange={(e) => setItemField(area.name, item, "issue", e.target.value)}
                                     >
                                       <option value="">Issue ▼</option>
-                                      {getIssueOptions(item).map((opt) => (
-                                        <option key={opt} value={opt}>
-                                          {opt}
-                                        </option>
-                                      ))}
+                                      {getIssueOptions(item).map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                                     </select>
                                   ) : (
                                     <select
-                                      style={{
-                                        ...styles.select,
-                                        ...(!issueMode ? styles.disabled : {}),
-                                      }}
+                                      style={{ ...styles.select, ...(!issueMode ? styles.disabled : {}) }}
                                       value={data.engineerAction}
                                       disabled={!issueMode}
-                                      onChange={(e) =>
-                                        setItemField(area.name, item, "engineerAction", e.target.value)
-                                      }
+                                      onChange={(e) => setItemField(area.name, item, "engineerAction", e.target.value)}
                                     >
                                       <option value="">Engineer Action ▼</option>
-                                      {ACTION_OPTIONS.map((opt) => (
-                                        <option key={opt} value={opt}>
-                                          {opt}
-                                        </option>
-                                      ))}
+                                      {ACTION_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                                     </select>
                                   )}
 
                                   {isTempItem(item) ? (
                                     <select
-                                      style={{
-                                        ...styles.select,
-                                        ...(!issueMode ? styles.disabled : {}),
-                                      }}
+                                      style={{ ...styles.select, ...(!issueMode ? styles.disabled : {}) }}
                                       value={data.engineerAction}
                                       disabled={!issueMode}
-                                      onChange={(e) =>
-                                        setItemField(area.name, item, "engineerAction", e.target.value)
-                                      }
+                                      onChange={(e) => setItemField(area.name, item, "engineerAction", e.target.value)}
                                     >
                                       <option value="">Engineer Action ▼</option>
-                                      {ACTION_OPTIONS.map((opt) => (
-                                        <option key={opt} value={opt}>
-                                          {opt}
-                                        </option>
-                                      ))}
+                                      {ACTION_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                                     </select>
                                   ) : (
                                     <input
-                                      style={{
-                                        ...styles.input,
-                                        ...(!issueMode || data.engineerAction !== "HOTSOS Logged" ? styles.disabled : {}),
-                                        gridColumn: "1 / -1",
-                                      }}
+                                      style={{ ...styles.input, ...(!issueMode || data.engineerAction !== "HOTSOS Logged" ? styles.disabled : {}), gridColumn: "1 / -1" }}
                                       placeholder="HOTSOS #"
                                       value={data.hotsos}
                                       disabled={!issueMode || data.engineerAction !== "HOTSOS Logged"}
@@ -1666,11 +1133,7 @@ export default function App() {
 
                                   {isTempItem(item) && (
                                     <input
-                                      style={{
-                                        ...styles.input,
-                                        ...(!issueMode || data.engineerAction !== "HOTSOS Logged" ? styles.disabled : {}),
-                                        gridColumn: "1 / -1",
-                                      }}
+                                      style={{ ...styles.input, ...(!issueMode || data.engineerAction !== "HOTSOS Logged" ? styles.disabled : {}), gridColumn: "1 / -1" }}
                                       placeholder="HOTSOS #"
                                       value={data.hotsos}
                                       disabled={!issueMode || data.engineerAction !== "HOTSOS Logged"}
@@ -1682,46 +1145,24 @@ export default function App() {
                                 {issueMode && (
                                   <div style={{ marginTop: 12 }}>
                                     <div style={styles.smallLabel}>Issue Photos</div>
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      capture="environment"
-                                      multiple
-                                      onChange={(e) => addIssuePhotos(area.name, item, e.target.files)}
-                                    />
+                                    <input type="file" accept="image/*" capture="environment" multiple onChange={(e) => addIssuePhotos(area.name, item, e.target.files)} />
                                     <div style={styles.photoRow}>
                                       {(data.photos || []).map((photo, idx) => (
                                         <div key={idx}>
                                           <img src={photo} alt="Issue" style={styles.thumb} />
-                                          <button
-                                            type="button"
-                                            style={styles.btnSecondary}
-                                            onMouseDown={press}
-                                            onMouseUp={release}
-                                            onMouseLeave={release}
-                                            onClick={() => removeIssuePhoto(area.name, item, idx)}
-                                          >
-                                            Delete
-                                          </button>
+                                          <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={() => removeIssuePhoto(area.name, item, idx)}>Delete</button>
                                         </div>
                                       ))}
                                     </div>
                                   </div>
                                 )}
 
-                                {isTempItem(item) && isOutOfRange(data.temperature) && (
-                                  <div style={styles.outOfRangeNote}>Out of range</div>
-                                )}
+                                {isTempItem(item) && isOutOfRange(data.temperature) && <div style={styles.outOfRangeNote}>Out of range</div>}
                               </div>
                             );
                           })}
 
-                          <textarea
-                            style={styles.textarea}
-                            placeholder="Notes"
-                            value={form.areas[area.name].notes}
-                            onChange={(e) => setAreaNotes(area.name, e.target.value)}
-                          />
+                          <textarea style={styles.textarea} placeholder="Notes" value={form.areas[area.name].notes} onChange={(e) => setAreaNotes(area.name, e.target.value)} />
                         </div>
                       )}
                     </div>
@@ -1735,50 +1176,10 @@ export default function App() {
             <div style={styles.reportHeader}>Email Report Preview</div>
 
             <div style={styles.buttonBar}>
-              <button
-                type="button"
-                style={styles.btnSecondary}
-                onMouseDown={press}
-                onMouseUp={release}
-                onMouseLeave={release}
-                onClick={copyHtmlEmail}
-              >
-                Copy for Desktop Outlook
-              </button>
-
-              <button
-                type="button"
-                style={styles.btnSecondary}
-                onMouseDown={press}
-                onMouseUp={release}
-                onMouseLeave={release}
-                onClick={openOutlookDraft}
-              >
-                Open Outlook Draft
-              </button>
-
-              <button
-                type="button"
-                style={styles.btnPrimary}
-                onMouseDown={press}
-                onMouseUp={release}
-                onMouseLeave={release}
-                onClick={downloadHtmlEmail}
-              >
-                Download Report
-              </button>
-
-              <button
-                type="button"
-                style={styles.btnPrimary}
-                onMouseDown={press}
-                onMouseUp={release}
-                onMouseLeave={release}
-                onClick={downloadHotsosTags}
-              >
-                Download HOTSOS Tags
-              </button>
-
+              <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={copyHtmlEmail}>Copy for Desktop Outlook</button>
+              <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={openOutlookDraft}>Open Outlook Draft</button>
+              <button type="button" style={styles.btnPrimary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={downloadHtmlEmail}>Download Report</button>
+              <button type="button" style={styles.btnPrimary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={downloadHotsosTags}>Download HOTSOS Tags</button>
               {copyMessage ? <span style={styles.copyMessage}>{copyMessage}</span> : null}
             </div>
 
@@ -1788,7 +1189,7 @@ export default function App() {
                 <div style={styles.previewMetaGrid}>
                   <div><strong>Inspector:</strong> {form.inspector || "—"}</div>
                   <div><strong>Date:</strong> {form.date || "—"}</div>
-                  <div><strong>Time:</strong> {form.time || "—"}</div>
+                  <div><strong>Time:</strong> {formatTagTime(form.time) || form.time || "—"}</div>
                   <div><strong>Subject:</strong> {reportSubject}</div>
                   <div><strong>Printable HOTSOS Tags:</strong> {hotsosTagIssues.length}</div>
                 </div>
@@ -1816,9 +1217,7 @@ export default function App() {
                     {previewLeft.map((f) => (
                       <div key={`email-left-${f.floor}`} style={styles.previewSummaryRow}>
                         <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
-                        <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
-                          {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
-                        </div>
+                        <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>{f.issues === 0 ? "Clear" : `${f.issues} Issues`}</div>
                       </div>
                     ))}
                   </div>
@@ -1827,9 +1226,7 @@ export default function App() {
                     {previewRight.map((f) => (
                       <div key={`email-right-${f.floor}`} style={styles.previewSummaryRow}>
                         <div style={{ color: "#ffffff", fontWeight: 600 }}>{f.floor}</div>
-                        <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>
-                          {f.issues === 0 ? "Clear" : `${f.issues} Issues`}
-                        </div>
+                        <div style={f.issues === 0 ? styles.previewClear : styles.previewIssue}>{f.issues === 0 ? "Clear" : `${f.issues} Issues`}</div>
                       </div>
                     ))}
                   </div>
@@ -1838,24 +1235,15 @@ export default function App() {
 
               {detailedReport.map((group) => (
                 <div key={group.floor} style={styles.previewGroupCard}>
-                  <div
-                    style={{
-                      ...styles.previewGroupHeader,
-                      background: group.building === "Separate" ? "#6d28d9" : "#1e3a8a",
-                    }}
-                  >
-                    {group.floor}
-                  </div>
+                  <div style={{ ...styles.previewGroupHeader, background: group.building === "Separate" ? "#6d28d9" : "#1e3a8a" }}>{group.floor}</div>
 
                   <div style={styles.previewGroupBody}>
                     {group.areas.map((area) => {
-                      const hasContent =
-                        area.issues.length || area.temps.length || area.notes || area.routineChecks.length;
+                      const hasContent = area.issues.length || area.temps.length || area.notes || area.routineChecks.length;
 
                       return (
                         <div key={area.name} style={styles.previewAreaCard}>
                           <div style={styles.previewAreaTitle}>{area.name}</div>
-
                           {!hasContent && <div style={styles.noIssuesText}>No issues noted.</div>}
 
                           {!!area.routineChecks.length && (
@@ -1864,13 +1252,7 @@ export default function App() {
                               {area.routineChecks.map((check, idx) => (
                                 <div key={`${area.name}-check-${idx}`} style={styles.previewRoutineRow}>
                                   <div>{check.itemName}</div>
-                                  <div
-                                    style={{
-                                      fontWeight: 700,
-                                      textAlign: "right",
-                                      color: check.status === "OK" ? "#86efac" : "#f87171",
-                                    }}
-                                  >
+                                  <div style={{ fontWeight: 700, textAlign: "right", color: check.status === "OK" ? "#86efac" : "#f87171" }}>
                                     {check.status === "OK" ? "OK" : `Issue - ${check.issue}`}
                                   </div>
                                 </div>
@@ -1884,14 +1266,10 @@ export default function App() {
                                 <div key={`${area.name}-${issue.itemName}-${idx}`} style={styles.previewIssueCard}>
                                   <div>
                                     <div style={{ fontWeight: 700, color: "#ffffff" }}>{issue.itemName}</div>
-                                    <div style={{ marginTop: 4, color: "#cbd5e1", fontSize: 14 }}>
-                                      {issue.issue || "Issue logged"}
-                                    </div>
+                                    <div style={{ marginTop: 4, color: "#cbd5e1", fontSize: 14 }}>{issue.issue || "Issue logged"}</div>
                                     <div style={styles.issueBadges}>
                                       {issue.temperature ? <span style={styles.tempBadge}>Temp {issue.temperature}°F</span> : null}
-                                      {issue.engineerAction && issue.engineerAction !== "No Action" ? (
-                                        <span style={styles.grayBadge}>{issue.engineerAction}</span>
-                                      ) : null}
+                                      {issue.engineerAction && issue.engineerAction !== "No Action" ? <span style={styles.grayBadge}>{issue.engineerAction}</span> : null}
                                       {issue.hotsos ? <span style={styles.redBadge}>HOTSOS #{issue.hotsos}</span> : null}
                                     </div>
                                   </div>
@@ -1945,27 +1323,8 @@ export default function App() {
               </div>
 
               <div style={styles.historyButtons}>
-                <button
-                  type="button"
-                  style={styles.btnPrimary}
-                  onMouseDown={press}
-                  onMouseUp={release}
-                  onMouseLeave={release}
-                  onClick={() => loadWalk(entry)}
-                >
-                  Open
-                </button>
-
-                <button
-                  type="button"
-                  style={styles.btnSecondary}
-                  onMouseDown={press}
-                  onMouseUp={release}
-                  onMouseLeave={release}
-                  onClick={() => deleteWalk(entry.id)}
-                >
-                  Delete
-                </button>
+                <button type="button" style={styles.btnPrimary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={() => loadWalk(entry)}>Open</button>
+                <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={() => deleteWalk(entry.id)}>Delete</button>
               </div>
             </div>
           ))}
