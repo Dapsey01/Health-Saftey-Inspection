@@ -23,7 +23,7 @@ const STRUCTURE = [
       { name: "Pantry 1B", items: ["Hand Sink", "Ice Machine", "Reach-in 1B.1", "Reach-in 1B.2"] },
       { name: "Main Walk-in", items: ["Walk-in Cooler"] },
       { name: "Specialty Cooler", items: ["Walk-in Cooler"] },
-      { name: "Pantry 106", items: ["Hand Sink", "Reach-in Fridge"] },
+      { name: "Pantry 110", items: ["Hand Sink", "Reach-in Fridge"] },
       { name: "Pantry 108", items: ["Hand Sink", "Reach-in Fridge"] },
     ],
   },
@@ -122,6 +122,32 @@ function formatTagTime(value) {
   if (hour === 0) hour = 12;
 
   return `${hour}:${minute} ${suffix}`;
+}
+
+function sortAreasForDisplay(group) {
+  if (group.floor !== "1st Floor") return group.areas;
+
+  const pantries = group.areas.filter((area) => area.name.toLowerCase().startsWith("pantry"));
+  const otherAreas = group.areas.filter((area) => !area.name.toLowerCase().startsWith("pantry"));
+
+  const getSortParts = (name) => {
+    const match = name.match(/(\d+)([A-Za-z]*)/);
+    if (!match) return { number: 9999, suffix: "" };
+    return {
+      number: Number(match[1]),
+      suffix: match[2] || "",
+    };
+  };
+
+  pantries.sort((a, b) => {
+    const aParts = getSortParts(a.name);
+    const bParts = getSortParts(b.name);
+
+    if (aParts.number !== bParts.number) return aParts.number - bParts.number;
+    return aParts.suffix.localeCompare(bParts.suffix);
+  });
+
+  return [...pantries, ...otherAreas];
 }
 
 function buildInitialState() {
@@ -352,7 +378,7 @@ export default function App() {
   const detailedReport = useMemo(() => {
     return STRUCTURE.map((group) => ({
       ...group,
-      areas: group.areas.map((area) => {
+      areas: sortAreasForDisplay(group).map((area) => {
         const areaItems = form.areas[area.name].items;
 
         const issues = Object.entries(areaItems)
@@ -392,7 +418,7 @@ export default function App() {
     const tags = [];
 
     STRUCTURE.forEach((group) => {
-      group.areas.forEach((area) => {
+      sortAreasForDisplay(group).forEach((area) => {
         const areaItems = form.areas[area.name]?.items || {};
         Object.entries(areaItems).forEach(([itemName, item]) => {
           if (
@@ -1029,7 +1055,7 @@ export default function App() {
               <div key={group.floor} style={{ marginBottom: 16 }}>
                 <div style={group.building === "Separate" ? styles.floorHeaderPurple : styles.floorHeaderBlue}>{group.floor}</div>
 
-                {group.areas.map((area) => {
+                {sortAreasForDisplay(group).map((area) => {
                   const isOpen = openAreaName === area.name;
 
                   return (
