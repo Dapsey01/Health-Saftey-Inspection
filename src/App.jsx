@@ -6,6 +6,10 @@ const HISTORY_KEY = "cc_walk_history";
 const STATUS_OPTIONS = ["OK", "Issue"];
 const ACTION_OPTIONS = ["No Action", "Call Made", "HOTSOS Logged"];
 
+const MAX_PHOTOS_PER_ITEM = 3;
+const PHOTO_MAX_DIMENSION = 900;
+const PHOTO_QUALITY = 0.65;
+
 const ISSUE_OPTIONS = {
   "Hand Sink": ["Needs Cleaning", "Needs Soap", "Needs Paper Towels", "No Hot Water", "Needs Trash Can"],
   "Ice Machine": ["Not working", "Needs Cleaning"],
@@ -150,6 +154,44 @@ function sortAreasForDisplay(group) {
   return [...pantries, ...otherAreas];
 }
 
+function compressImageFile(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const img = new Image();
+
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          let { width, height } = img;
+
+          const scale = Math.min(1, PHOTO_MAX_DIMENSION / Math.max(width, height));
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const compressed = canvas.toDataURL("image/jpeg", PHOTO_QUALITY);
+          resolve(compressed);
+        } catch {
+          resolve(reader.result);
+        }
+      };
+
+      img.onerror = () => resolve(reader.result);
+      img.src = reader.result;
+    };
+
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
 function buildInitialState() {
   const state = {
     inspector: "",
@@ -205,7 +247,7 @@ function normalizeFormData(raw) {
         temperature: rawItem.temperature || "",
         engineerAction: rawItem.engineerAction || "",
         hotsos: rawItem.hotsos || "",
-        photos: Array.isArray(rawItem.photos) ? rawItem.photos : [],
+        photos: Array.isArray(rawItem.photos) ? rawItem.photos.slice(0, MAX_PHOTOS_PER_ITEM) : [],
       };
     });
   });
@@ -245,6 +287,8 @@ export default function App() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
     } catch (err) {
       console.warn("Auto-save skipped:", err);
+      setCopyMessage("Auto-save skipped. Too much photo data. Delete extra photos.");
+      setTimeout(() => setCopyMessage(""), 4000);
     }
   }, [form]);
 
@@ -302,27 +346,42 @@ export default function App() {
     if (!files || !files.length) return;
 
     try {
-      const readers = Array.from(files).map(
-        (file) =>
-          new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(file);
-          })
-      );
+      const currentPhotos = form.areas[areaName].items[itemName].photos || [];
+      const remainingSlots = MAX_PHOTOS_PER_ITEM - currentPhotos.length;
 
-      const images = (await Promise.all(readers)).filter(Boolean);
-      if (!images.length) return;
+      if (remainingSlots <= 0) {
+        setCopyMessage(`Photo limit reached: max ${MAX_PHOTOS_PER_ITEM} photos per issue.`);
+        setTimeout(() => setCopyMessage(""), 3000);
+        return;
+      }
+
+      const selectedFiles = Array.from(files).slice(0, remainingSlots);
+      const compressedImages = (await Promise.all(selectedFiles.map((file) => compressImageFile(file)))).filter(Boolean);
+
+      if (!compressedImages.length) {
+        setCopyMessage("Photo could not be added.");
+        setTimeout(() => setCopyMessage(""), 3000);
+        return;
+      }
 
       setForm((prev) => {
         const next = deepClone(prev);
         const current = next.areas[areaName].items[itemName].photos || [];
-        next.areas[areaName].items[itemName].photos = [...current, ...images];
+        next.areas[areaName].items[itemName].photos = [...current, ...compressedImages].slice(0, MAX_PHOTOS_PER_ITEM);
         return next;
       });
+
+      if (Array.from(files).length > remainingSlots) {
+        setCopyMessage(`Added ${remainingSlots} photo${remainingSlots === 1 ? "" : "s"}. Max ${MAX_PHOTOS_PER_ITEM} per issue.`);
+      } else {
+        setCopyMessage("Photo compressed and saved.");
+      }
+
+      setTimeout(() => setCopyMessage(""), 3000);
     } catch (err) {
       console.warn("Photo upload failed:", err);
+      setCopyMessage("Photo upload failed. Try one photo at a time.");
+      setTimeout(() => setCopyMessage(""), 3000);
     }
   };
 
