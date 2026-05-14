@@ -6,9 +6,9 @@ const HISTORY_KEY = "cc_walk_history";
 const STATUS_OPTIONS = ["OK", "Issue"];
 const ACTION_OPTIONS = ["No Action", "Call Made", "HOTSOS Logged"];
 
-const MAX_PHOTOS_PER_ITEM = 3;
-const PHOTO_MAX_DIMENSION = 900;
-const PHOTO_QUALITY = 0.65;
+const MAX_PHOTOS_PER_ITEM = 2;
+const PHOTO_MAX_DIMENSION = 500;
+const PHOTO_QUALITY = 0.45;
 
 const ISSUE_OPTIONS = {
   "Hand Sink": ["Needs Cleaning", "Needs Soap", "Needs Paper Towels", "No Hot Water", "Needs Trash Can"],
@@ -259,6 +259,18 @@ function stripPhotosFromForm(form) {
   return deepClone(form);
 }
 
+function stripPhotosForHistory(form) {
+  const next = deepClone(form);
+
+  Object.keys(next.areas).forEach((areaName) => {
+    Object.keys(next.areas[areaName].items).forEach((itemName) => {
+      next.areas[areaName].items[itemName].photos = [];
+    });
+  });
+
+  return next;
+}
+
 export default function App() {
   const [form, setForm] = useState(() => {
     try {
@@ -283,13 +295,29 @@ export default function App() {
   const areaRefs = useRef({});
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
-    } catch (err) {
-      console.warn("Auto-save skipped:", err);
-      setCopyMessage("Auto-save skipped. Too much photo data. Delete extra photos.");
-      setTimeout(() => setCopyMessage(""), 4000);
-    }
+    const timeout = setTimeout(() => {
+      try {
+        const safeForm = deepClone(form);
+
+        Object.keys(safeForm.areas).forEach((areaName) => {
+          Object.keys(safeForm.areas[areaName].items).forEach((itemName) => {
+            const item = safeForm.areas[areaName].items[itemName];
+
+            if (Array.isArray(item.photos)) {
+              item.photos = item.photos.slice(0, MAX_PHOTOS_PER_ITEM);
+            }
+          });
+        });
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(safeForm));
+      } catch (err) {
+        console.warn("Auto-save skipped:", err);
+        setCopyMessage("Memory limit reached. Remove extra photos or shorten notes.");
+        setTimeout(() => setCopyMessage(""), 4000);
+      }
+    }, 700);
+
+    return () => clearTimeout(timeout);
   }, [form]);
 
   useEffect(() => {
@@ -356,7 +384,14 @@ export default function App() {
       }
 
       const selectedFiles = Array.from(files).slice(0, remainingSlots);
-      const compressedImages = (await Promise.all(selectedFiles.map((file) => compressImageFile(file)))).filter(Boolean);
+      setCopyMessage("Compressing photos...");
+
+      const compressedImages = [];
+
+      for (const file of selectedFiles) {
+        const compressed = await compressImageFile(file);
+        if (compressed) compressedImages.push(compressed);
+      }
 
       if (!compressedImages.length) {
         setCopyMessage("Photo could not be added.");
@@ -374,14 +409,14 @@ export default function App() {
       if (Array.from(files).length > remainingSlots) {
         setCopyMessage(`Added ${remainingSlots} photo${remainingSlots === 1 ? "" : "s"}. Max ${MAX_PHOTOS_PER_ITEM} per issue.`);
       } else {
-        setCopyMessage("Photo compressed and saved.");
+        setCopyMessage(`Photo saved. Max ${MAX_PHOTOS_PER_ITEM} per issue.`);
       }
 
       setTimeout(() => setCopyMessage(""), 3000);
     } catch (err) {
       console.warn("Photo upload failed:", err);
-      setCopyMessage("Photo upload failed. Try one photo at a time.");
-      setTimeout(() => setCopyMessage(""), 3000);
+      setCopyMessage("Phone memory overloaded. Try one photo only.");
+      setTimeout(() => setCopyMessage(""), 3500);
     }
   };
 
@@ -551,8 +586,9 @@ export default function App() {
       date: form.date || "",
       time: form.time || "",
       issues: issueCount,
-      data: stripPhotosFromForm(form),
+      data: stripPhotosForHistory(form),
     };
+
     setHistory((prev) => [entry, ...prev]);
     setCopyMessage("Walk saved.");
     setTimeout(() => setCopyMessage(""), 2000);
