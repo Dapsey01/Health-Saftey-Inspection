@@ -105,6 +105,13 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+function safeFileName(value) {
+  return String(value || "")
+    .replace(/[<>:"/\\|?*]+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function formatTagDate(value) {
   if (!value) return "";
   const parts = value.split("-");
@@ -255,10 +262,6 @@ function normalizeFormData(raw) {
   return base;
 }
 
-function stripPhotosFromForm(form) {
-  return deepClone(form);
-}
-
 function stripPhotosForHistory(form) {
   const next = deepClone(form);
 
@@ -406,12 +409,7 @@ export default function App() {
         return next;
       });
 
-      if (Array.from(files).length > remainingSlots) {
-        setCopyMessage(`Added ${remainingSlots} photo${remainingSlots === 1 ? "" : "s"}. Max ${MAX_PHOTOS_PER_ITEM} per issue.`);
-      } else {
-        setCopyMessage(`Photo saved. Max ${MAX_PHOTOS_PER_ITEM} per issue.`);
-      }
-
+      setCopyMessage(`Photo saved. Max ${MAX_PHOTOS_PER_ITEM} per issue.`);
       setTimeout(() => setCopyMessage(""), 3000);
     } catch (err) {
       console.warn("Photo upload failed:", err);
@@ -743,12 +741,6 @@ export default function App() {
               margin-top: 8px;
               color: #333333;
             }
-
-            @media print {
-              body {
-                background: #ffffff;
-              }
-            }
           </style>
         </head>
         <body>
@@ -963,51 +955,32 @@ export default function App() {
     `;
   }, [detailedReport, floorSummary, form.date, form.inspector, form.time, issueCount, callCount, hotsosCount, reportSubject]);
 
-  const copyHtmlEmail = async () => {
-    try {
-      if (navigator.clipboard && window.ClipboardItem) {
-        const item = new ClipboardItem({
-          "text/html": new Blob([htmlEmail], { type: "text/html" }),
-          "text/plain": new Blob([htmlEmail.replace(/<[^>]+>/g, " ")], { type: "text/plain" }),
-        });
-        await navigator.clipboard.write([item]);
-      } else {
-        await navigator.clipboard.writeText(htmlEmail);
-      }
-      setCopyMessage("Copied! Paste into Outlook.");
-      setTimeout(() => setCopyMessage(""), 2500);
-    } catch {
-      setCopyMessage("Copy failed on this browser. Use Download Report.");
-      setTimeout(() => setCopyMessage(""), 3000);
-    }
-  };
-
-  const openOutlookDraft = () => {
-    const subject = encodeURIComponent(reportSubject);
-    const body = encodeURIComponent(
-      "Your formatted report is copied. Paste it into the body of this Outlook message for best results."
-    );
-    const url = `https://outlook.office.com/mail/deeplink/compose?subject=${subject}&body=${body}`;
-    window.open(url, "_blank");
-  };
-
   const downloadHtmlEmail = () => {
+    const inspector = safeFileName(form.inspector || "Supervisor");
+    const date = safeFileName(form.date || "No Date");
     const blob = new Blob([htmlEmail], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
+
     link.href = url;
-    link.download = `cc-walk-report-${form.date || "draft"}.html`;
+    link.download = `CC Walk - ${inspector} - ${date}.html`;
     link.click();
+
     URL.revokeObjectURL(url);
+
+    setCopyMessage("Report downloaded. Attach this file to your email.");
+    setTimeout(() => setCopyMessage(""), 3500);
   };
 
   const downloadHotsosTags = () => {
     const blob = new Blob([hotsosTagsHtml], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
+
     link.href = url;
-    link.download = `hotsos-tags-${form.date || "draft"}.html`;
+    link.download = `HOT SOS Tags - ${safeFileName(form.date || "Draft")}.html`;
     link.click();
+
     URL.revokeObjectURL(url);
 
     if (!hotsosTagIssues.length) {
@@ -1028,7 +1001,7 @@ export default function App() {
     topButtonRow: { display: "flex", gap: 12, marginTop: 10, flexWrap: "wrap" },
     input: { width: "100%", padding: 14, borderRadius: 18, border: "1px solid #334155", fontSize: 18, fontWeight: 600, boxSizing: "border-box", background: "linear-gradient(145deg, #475569, #1e293b)", color: "#ffffff", boxShadow: "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)", outline: "none" },
     textarea: { width: "100%", minHeight: 95, padding: 14, borderRadius: 18, border: "1px solid #334155", fontSize: 15, boxSizing: "border-box", background: "linear-gradient(145deg, #475569, #1e293b)", color: "#ffffff", boxShadow: "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)", outline: "none" },
-    select: { width: "100%", padding: 14, borderRadius: 18, border: "1px solid #334155", fontSize: 15, fontWeight: 600, boxSizing: "border-box", background: "linear-gradient(145deg, #475569, #1e293b)", color: "#ffffff", boxShadow: "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)", outline: "none" },
+    select: { width: "100%", padding: 14, borderRadius: 18, border: "1px solid #334155", fontSize: 15, fontWeight: 600, boxSizing: "border-box", background: "#334155", color: "#ffffff", boxShadow: "0 6px 14px rgba(0,0,0,0.4), 0 0 10px rgba(148,163,184,0.25), inset 0 2px 0 rgba(255,255,255,0.12)", outline: "none", colorScheme: "dark" },
     disabled: { opacity: 0.55 },
     tempAlert: { border: "1px solid #ef4444", background: "#450a0a", color: "#fecaca" },
     sectionTitle: { fontWeight: "bold", fontSize: 19, padding: "14px 16px 8px", color: "#ffffff" },
@@ -1104,6 +1077,24 @@ export default function App() {
 
   return (
     <div style={styles.page}>
+      <style>{`
+        select option {
+          background-color: #1e293b !important;
+          color: #ffffff !important;
+        }
+
+        select:focus {
+          background-color: #334155 !important;
+          color: #ffffff !important;
+        }
+
+        select option:checked,
+        select option:hover {
+          background-color: #1d4ed8 !important;
+          color: #ffffff !important;
+        }
+      `}</style>
+
       <div style={styles.container}>
         <div style={styles.card}>
           <div style={styles.topHeader}>Conference Center Health & Safety Walk</div>
@@ -1297,8 +1288,6 @@ export default function App() {
             <div style={styles.reportHeader}>Email Report Preview</div>
 
             <div style={styles.buttonBar}>
-              <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={copyHtmlEmail}>Copy for Desktop Outlook</button>
-              <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={openOutlookDraft}>Open Outlook Draft</button>
               <button type="button" style={styles.btnPrimary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={downloadHtmlEmail}>Download Report</button>
               <button type="button" style={styles.btnPrimary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={downloadHotsosTags}>Download HOTSOS Tags</button>
               {copyMessage ? <span style={styles.copyMessage}>{copyMessage}</span> : null}
