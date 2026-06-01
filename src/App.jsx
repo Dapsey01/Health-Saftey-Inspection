@@ -12,7 +12,7 @@ const PHOTO_QUALITY = 0.45;
 
 const ISSUE_OPTIONS = {
   "Hand Sink": ["Needs Cleaning", "Needs Soap", "Needs Paper Towels", "No Hot Water", "Needs Trash Can"],
-  "Ice Machine": ["Not working", "Needs Cleaning"],
+  "Ice Machine": ["Not working", "Needs Cleaning", "Missing Parts"],
   "Reach-in Fridge": ["Temp Too Low", "Temp Too High"],
   "Walk-in Cooler": ["Temp Too Low", "Temp Too High"],
   "Walk-in": ["Temp Too Low", "Temp Too High"],
@@ -25,10 +25,11 @@ const STRUCTURE = [
     areas: [
       { name: "Pantry 1A", items: ["Hand Sink", "Ice Machine", "Reach-in Fridge"] },
       { name: "Pantry 1B", items: ["Hand Sink", "Ice Machine", "Reach-in 1B.1", "Reach-in 1B.2"] },
+      { name: "Pantry 108", items: ["Hand Sink", "Reach-in Fridge"] },
+      { name: "Pantry 110", items: ["Hand Sink", "Reach-in Fridge"] },
+      { name: "Main Ice Machine", items: ["Ice Machine"] },
       { name: "Main Walk-in", items: ["Walk-in Cooler"] },
       { name: "Specialty Cooler", items: ["Walk-in Cooler"] },
-      { name: "Pantry 110", items: ["Hand Sink", "Reach-in Fridge"] },
-      { name: "Pantry 108", items: ["Hand Sink", "Reach-in Fridge"] },
     ],
   },
   {
@@ -39,7 +40,7 @@ const STRUCTURE = [
       { name: "Pantry 2B", items: ["Hand Sink", "Walk-in"] },
       { name: "201 Pantry", items: ["Hand Sink", "Reach-in Fridge"] },
       { name: "204 Pantry", items: ["Hand Sink", "Reach-in Fridge"] },
-      { name: "205 Ice Machine", items: ["Ice Machine"] },
+      { name: "205 Ice Machine", items: ["Hand Sink", "Ice Machine"] },
     ],
   },
   {
@@ -139,26 +140,22 @@ function sortAreasForDisplay(group) {
   if (group.floor !== "1st Floor") return group.areas;
 
   const pantries = group.areas.filter((area) => area.name.toLowerCase().startsWith("pantry"));
-  const otherAreas = group.areas.filter((area) => !area.name.toLowerCase().startsWith("pantry"));
+  const others = group.areas.filter((area) => !area.name.toLowerCase().startsWith("pantry"));
 
   const getSortParts = (name) => {
     const match = name.match(/(\d+)([A-Za-z]*)/);
     if (!match) return { number: 9999, suffix: "" };
-    return {
-      number: Number(match[1]),
-      suffix: match[2] || "",
-    };
+    return { number: Number(match[1]), suffix: match[2] || "" };
   };
 
   pantries.sort((a, b) => {
     const aParts = getSortParts(a.name);
     const bParts = getSortParts(b.name);
-
     if (aParts.number !== bParts.number) return aParts.number - bParts.number;
     return aParts.suffix.localeCompare(bParts.suffix);
   });
 
-  return [...pantries, ...otherAreas];
+  return [...pantries, ...others];
 }
 
 function compressImageFile(file) {
@@ -172,8 +169,8 @@ function compressImageFile(file) {
         try {
           const canvas = document.createElement("canvas");
           let { width, height } = img;
-
           const scale = Math.min(1, PHOTO_MAX_DIMENSION / Math.max(width, height));
+
           width = Math.round(width * scale);
           height = Math.round(height * scale);
 
@@ -183,8 +180,7 @@ function compressImageFile(file) {
           const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0, width, height);
 
-          const compressed = canvas.toDataURL("image/jpeg", PHOTO_QUALITY);
-          resolve(compressed);
+          resolve(canvas.toDataURL("image/jpeg", PHOTO_QUALITY));
         } catch {
           resolve(reader.result);
         }
@@ -211,6 +207,8 @@ function buildInitialState() {
     group.areas.forEach((area) => {
       state.areas[area.name] = {
         notes: "",
+        miscHotsos: "",
+        miscPhotos: [],
         items: {},
       };
 
@@ -243,6 +241,10 @@ function normalizeFormData(raw) {
     if (!rawArea) return;
 
     base.areas[areaName].notes = rawArea.notes || "";
+    base.areas[areaName].miscHotsos = rawArea.miscHotsos || "";
+    base.areas[areaName].miscPhotos = Array.isArray(rawArea.miscPhotos)
+      ? rawArea.miscPhotos.slice(0, MAX_PHOTOS_PER_ITEM)
+      : [];
 
     Object.keys(base.areas[areaName].items).forEach((itemName) => {
       const rawItem = rawArea.items?.[itemName];
@@ -266,6 +268,8 @@ function stripPhotosForHistory(form) {
   const next = deepClone(form);
 
   Object.keys(next.areas).forEach((areaName) => {
+    next.areas[areaName].miscPhotos = [];
+
     Object.keys(next.areas[areaName].items).forEach((itemName) => {
       next.areas[areaName].items[itemName].photos = [];
     });
@@ -303,8 +307,14 @@ export default function App() {
         const safeForm = deepClone(form);
 
         Object.keys(safeForm.areas).forEach((areaName) => {
-          Object.keys(safeForm.areas[areaName].items).forEach((itemName) => {
-            const item = safeForm.areas[areaName].items[itemName];
+          const area = safeForm.areas[areaName];
+
+          if (Array.isArray(area.miscPhotos)) {
+            area.miscPhotos = area.miscPhotos.slice(0, MAX_PHOTOS_PER_ITEM);
+          }
+
+          Object.keys(area.items).forEach((itemName) => {
+            const item = area.items[itemName];
 
             if (Array.isArray(item.photos)) {
               item.photos = item.photos.slice(0, MAX_PHOTOS_PER_ITEM);
@@ -339,6 +349,60 @@ export default function App() {
     setForm((prev) => {
       const next = deepClone(prev);
       next.areas[areaName].notes = value;
+      return next;
+    });
+  };
+
+  const setAreaMiscHotsos = (areaName, value) => {
+    setForm((prev) => {
+      const next = deepClone(prev);
+      next.areas[areaName].miscHotsos = value;
+      return next;
+    });
+  };
+
+  const addAreaMiscPhotos = async (areaName, files) => {
+    if (!files || !files.length) return;
+
+    try {
+      const currentPhotos = form.areas[areaName].miscPhotos || [];
+      const remainingSlots = MAX_PHOTOS_PER_ITEM - currentPhotos.length;
+
+      if (remainingSlots <= 0) {
+        setCopyMessage(`Photo limit reached: max ${MAX_PHOTOS_PER_ITEM} misc photos per area.`);
+        setTimeout(() => setCopyMessage(""), 3000);
+        return;
+      }
+
+      setCopyMessage("Compressing misc photo...");
+
+      const selectedFiles = Array.from(files).slice(0, remainingSlots);
+      const compressedImages = [];
+
+      for (const file of selectedFiles) {
+        const compressed = await compressImageFile(file);
+        if (compressed) compressedImages.push(compressed);
+      }
+
+      setForm((prev) => {
+        const next = deepClone(prev);
+        const current = next.areas[areaName].miscPhotos || [];
+        next.areas[areaName].miscPhotos = [...current, ...compressedImages].slice(0, MAX_PHOTOS_PER_ITEM);
+        return next;
+      });
+
+      setCopyMessage("Misc photo saved.");
+      setTimeout(() => setCopyMessage(""), 3000);
+    } catch {
+      setCopyMessage("Misc photo failed. Try one photo only.");
+      setTimeout(() => setCopyMessage(""), 3500);
+    }
+  };
+
+  const removeAreaMiscPhoto = (areaName, index) => {
+    setForm((prev) => {
+      const next = deepClone(prev);
+      next.areas[areaName].miscPhotos.splice(index, 1);
       return next;
     });
   };
@@ -396,12 +460,6 @@ export default function App() {
         if (compressed) compressedImages.push(compressed);
       }
 
-      if (!compressedImages.length) {
-        setCopyMessage("Photo could not be added.");
-        setTimeout(() => setCopyMessage(""), 3000);
-        return;
-      }
-
       setForm((prev) => {
         const next = deepClone(prev);
         const current = next.areas[areaName].items[itemName].photos || [];
@@ -411,8 +469,7 @@ export default function App() {
 
       setCopyMessage(`Photo saved. Max ${MAX_PHOTOS_PER_ITEM} per issue.`);
       setTimeout(() => setCopyMessage(""), 3000);
-    } catch (err) {
-      console.warn("Photo upload failed:", err);
+    } catch {
       setCopyMessage("Phone memory overloaded. Try one photo only.");
       setTimeout(() => setCopyMessage(""), 3500);
     }
@@ -457,13 +514,13 @@ export default function App() {
         Object.values(form.areas[area.name].items).forEach((item) => {
           if (item.status === "Issue") issues += 1;
         });
+
+        if (form.areas[area.name].miscHotsos || form.areas[area.name].miscPhotos?.length) {
+          issues += 1;
+        }
       });
 
-      return {
-        floor: group.floor,
-        building: group.building,
-        issues,
-      };
+      return { floor: group.floor, building: group.building, issues };
     });
   }, [form]);
 
@@ -471,21 +528,16 @@ export default function App() {
     return STRUCTURE.map((group) => ({
       ...group,
       areas: sortAreasForDisplay(group).map((area) => {
-        const areaItems = form.areas[area.name].items;
+        const areaData = form.areas[area.name];
+        const areaItems = areaData.items;
 
         const issues = Object.entries(areaItems)
           .filter(([, item]) => item.status === "Issue")
-          .map(([itemName, item]) => ({
-            itemName,
-            ...item,
-          }));
+          .map(([itemName, item]) => ({ itemName, ...item }));
 
         const temps = Object.entries(areaItems)
           .filter(([itemName, item]) => isTempItem(itemName) && item.temperature !== "")
-          .map(([itemName, item]) => ({
-            itemName,
-            temperature: item.temperature,
-          }));
+          .map(([itemName, item]) => ({ itemName, temperature: item.temperature }));
 
         const routineChecks = Object.entries(areaItems)
           .filter(([itemName]) => itemName === "Hand Sink" || itemName === "Ice Machine")
@@ -500,7 +552,9 @@ export default function App() {
           issues,
           temps,
           routineChecks,
-          notes: form.areas[area.name].notes,
+          notes: areaData.notes,
+          miscHotsos: areaData.miscHotsos,
+          miscPhotos: areaData.miscPhotos || [],
         };
       }),
     }));
@@ -511,7 +565,9 @@ export default function App() {
 
     STRUCTURE.forEach((group) => {
       sortAreasForDisplay(group).forEach((area) => {
-        const areaItems = form.areas[area.name]?.items || {};
+        const areaData = form.areas[area.name];
+        const areaItems = areaData?.items || {};
+
         Object.entries(areaItems).forEach(([itemName, item]) => {
           if (
             item.status === "Issue" &&
@@ -529,6 +585,18 @@ export default function App() {
             });
           }
         });
+
+        if (String(areaData?.miscHotsos || "").trim()) {
+          tags.push({
+            floor: group.floor,
+            area: area.name,
+            itemName: "Misc Issue",
+            issue: areaData.notes || "Misc HOTSOS logged",
+            hotsos: areaData.miscHotsos,
+            date: form.date,
+            time: form.time,
+          });
+        }
       });
     });
 
@@ -536,7 +604,13 @@ export default function App() {
   }, [form]);
 
   const issueCount = detailedReport.reduce(
-    (sum, group) => sum + group.areas.reduce((inner, area) => inner + area.issues.length, 0),
+    (sum, group) =>
+      sum +
+      group.areas.reduce(
+        (inner, area) =>
+          inner + area.issues.length + (area.miscHotsos || area.miscPhotos.length ? 1 : 0),
+        0
+      ),
     0
   );
 
@@ -544,8 +618,7 @@ export default function App() {
     (sum, group) =>
       sum +
       group.areas.reduce(
-        (inner, area) =>
-          inner + area.issues.filter((issue) => issue.engineerAction === "Call Made").length,
+        (inner, area) => inner + area.issues.filter((issue) => issue.engineerAction === "Call Made").length,
         0
       ),
     0
@@ -556,7 +629,9 @@ export default function App() {
       sum +
       group.areas.reduce(
         (inner, area) =>
-          inner + area.issues.filter((issue) => issue.engineerAction === "HOTSOS Logged").length,
+          inner +
+          area.issues.filter((issue) => issue.engineerAction === "HOTSOS Logged").length +
+          (area.miscHotsos ? 1 : 0),
         0
       ),
     0
@@ -649,103 +724,22 @@ export default function App() {
           <meta charset="utf-8" />
           <title>HOT SOS Tags</title>
           <style>
-            @page {
-              size: letter portrait;
-              margin: 0.5in;
-            }
-
-            * {
-              box-sizing: border-box;
-            }
-
-            body {
-              margin: 0;
-              font-family: Arial, Helvetica, sans-serif;
-              background: #ffffff;
-              color: #000000;
-            }
-
-            .tag-page {
-              min-height: 10in;
-              page-break-after: always;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            }
-
-            .tag-page:last-child {
-              page-break-after: auto;
-            }
-
-            .tag-card {
-              width: 7.5in;
-              min-height: 5.2in;
-              border: 3px solid #000000;
-              padding: 0.42in 0.35in;
-              text-align: center;
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-              align-items: center;
-            }
-
-            .item-name {
-              color: #e60000;
-              font-size: 54px;
-              line-height: 1.05;
-              font-weight: 900;
-              text-transform: uppercase;
-              margin-bottom: 26px;
-            }
-
-            .out-of-order {
-              color: #e60000;
-              font-size: 54px;
-              line-height: 1.05;
-              font-weight: 900;
-              text-transform: uppercase;
-              margin-bottom: 34px;
-            }
-
-            .hotsos {
-              font-size: 48px;
-              line-height: 1.15;
-              font-weight: 500;
-              margin-bottom: 28px;
-            }
-
-            .date {
-              font-size: 46px;
-              line-height: 1.15;
-              font-weight: 500;
-              margin-bottom: 10px;
-            }
-
-            .time {
-              font-size: 42px;
-              line-height: 1.15;
-              font-weight: 500;
-              margin-bottom: 22px;
-            }
-
-            .location {
-              font-size: 22px;
-              line-height: 1.3;
-              font-weight: 700;
-              margin-top: 6px;
-            }
-
-            .issue {
-              font-size: 18px;
-              line-height: 1.3;
-              margin-top: 8px;
-              color: #333333;
-            }
+            @page { size: letter portrait; margin: 0.5in; }
+            * { box-sizing: border-box; }
+            body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #fff; color: #000; }
+            .tag-page { min-height: 10in; page-break-after: always; display: flex; align-items: center; justify-content: center; }
+            .tag-page:last-child { page-break-after: auto; }
+            .tag-card { width: 7.5in; min-height: 5.2in; border: 3px solid #000; padding: 0.42in 0.35in; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+            .item-name { color: #e60000; font-size: 54px; line-height: 1.05; font-weight: 900; text-transform: uppercase; margin-bottom: 26px; }
+            .out-of-order { color: #e60000; font-size: 54px; line-height: 1.05; font-weight: 900; text-transform: uppercase; margin-bottom: 34px; }
+            .hotsos { font-size: 48px; line-height: 1.15; font-weight: 500; margin-bottom: 28px; }
+            .date { font-size: 46px; line-height: 1.15; font-weight: 500; margin-bottom: 10px; }
+            .time { font-size: 42px; line-height: 1.15; font-weight: 500; margin-bottom: 22px; }
+            .location { font-size: 22px; line-height: 1.3; font-weight: 700; margin-top: 6px; }
+            .issue { font-size: 18px; line-height: 1.3; margin-top: 8px; color: #333; }
           </style>
         </head>
-        <body>
-          ${tagsHtml}
-        </body>
+        <body>${tagsHtml}</body>
       </html>
     `;
   }, [hotsosTagIssues]);
@@ -771,12 +765,34 @@ export default function App() {
     const floorBlocks = detailedReport
       .map((group) => {
         const headerBg = group.building === "Separate" ? "#ede9fe" : "#dbeafe";
-        const headerText = "#111827";
 
         const areaHtml = group.areas
           .map((area) => {
             const hasContent =
-              area.issues.length || area.temps.length || area.notes || area.routineChecks.length;
+              area.issues.length ||
+              area.temps.length ||
+              area.notes ||
+              area.routineChecks.length ||
+              area.miscHotsos ||
+              area.miscPhotos.length;
+
+            const miscHtml =
+              area.miscHotsos || area.miscPhotos.length
+                ? `
+                  <div style="margin-top:12px;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;padding:12px;">
+                    <div style="font-weight:700;color:#111827;font-size:14px;margin-bottom:6px;">Misc HOTSOS / Photo</div>
+                    ${
+                      area.miscHotsos
+                        ? `<div style="color:#1e3a8a;font-weight:700;font-size:14px;margin-bottom:8px;">HOTSOS #${escapeHtml(area.miscHotsos)}</div>`
+                        : ""
+                    }
+                    ${
+                      area.miscPhotos[0]
+                        ? `<img src="${area.miscPhotos[0]}" alt="Misc photo" width="140" style="display:block;width:140px;height:105px;object-fit:cover;border-radius:12px;border:1px solid #d1d5db;" />`
+                        : ""
+                    }
+                  </div>`
+                : "";
 
             const routineChecksHtml = area.routineChecks.length
               ? `
@@ -807,29 +823,13 @@ export default function App() {
                           <div style="font-weight:700;color:#111827;font-size:15px;">${escapeHtml(issue.itemName)}</div>
                           <div style="margin-top:4px;color:#475569;font-size:14px;line-height:1.4;">${escapeHtml(issue.issue || "Issue logged")}</div>
                           <div style="margin-top:8px;">
-                            ${
-                              issue.temperature
-                                ? `<span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">Temp ${escapeHtml(issue.temperature)}°F</span>`
-                                : ""
-                            }
-                            ${
-                              issue.engineerAction && issue.engineerAction !== "No Action"
-                                ? `<span style="display:inline-block;background:#e5e7eb;color:#374151;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">${escapeHtml(issue.engineerAction)}</span>`
-                                : ""
-                            }
-                            ${
-                              issue.hotsos
-                                ? `<span style="display:inline-block;background:#fee2e2;color:#b91c1c;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">HOTSOS #${escapeHtml(issue.hotsos)}</span>`
-                                : ""
-                            }
+                            ${issue.temperature ? `<span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">Temp ${escapeHtml(issue.temperature)}°F</span>` : ""}
+                            ${issue.engineerAction && issue.engineerAction !== "No Action" ? `<span style="display:inline-block;background:#e5e7eb;color:#374151;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">${escapeHtml(issue.engineerAction)}</span>` : ""}
+                            ${issue.hotsos ? `<span style="display:inline-block;background:#fee2e2;color:#b91c1c;font-size:12px;font-weight:700;border-radius:999px;padding:4px 8px;margin:0 6px 6px 0;">HOTSOS #${escapeHtml(issue.hotsos)}</span>` : ""}
                           </div>
                         </td>
                         <td valign="top" width="110">
-                          ${
-                            issue.photos && issue.photos[0]
-                              ? `<img src="${issue.photos[0]}" alt="Issue photo" width="110" style="display:block;width:110px;height:96px;object-fit:cover;border-radius:12px;border:1px solid #d1d5db;" />`
-                              : `<div style="width:110px;height:96px;border-radius:12px;border:1px dashed #cbd5e1;color:#94a3b8;font-size:12px;text-align:center;line-height:96px;">No Photo</div>`
-                          }
+                          ${issue.photos && issue.photos[0] ? `<img src="${issue.photos[0]}" alt="Issue photo" width="110" style="display:block;width:110px;height:96px;object-fit:cover;border-radius:12px;border:1px solid #d1d5db;" />` : `<div style="width:110px;height:96px;border-radius:12px;border:1px dashed #cbd5e1;color:#94a3b8;font-size:12px;text-align:center;line-height:96px;">No Photo</div>`}
                         </td>
                       </tr>
                     </table>
@@ -869,6 +869,7 @@ export default function App() {
                 ${!hasContent ? `<div style="font-size:14px;color:#64748b;">No issues noted.</div>` : ""}
                 ${routineChecksHtml}
                 ${issuesHtml ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:12px;">${issuesHtml}</table>` : ""}
+                ${miscHtml}
                 ${tempsHtml}
                 ${notesHtml}
               </div>`;
@@ -877,12 +878,10 @@ export default function App() {
 
         return `
           <div style="margin-top:18px;border:1px solid #dbe2ea;border-radius:18px;overflow:hidden;background:#ffffff;">
-            <div style="background:${headerBg};color:${headerText};font-weight:700;font-size:18px;padding:14px 18px;border-bottom:1px solid #dbe2ea;">
+            <div style="background:${headerBg};color:#111827;font-weight:700;font-size:18px;padding:14px 18px;border-bottom:1px solid #dbe2ea;">
               ${escapeHtml(group.floor)}
             </div>
-            <div style="padding:16px;">
-              ${areaHtml}
-            </div>
+            <div style="padding:16px;">${areaHtml}</div>
           </div>`;
       })
       .join("");
@@ -940,12 +939,7 @@ export default function App() {
 
                   <tr><td height="16"></td></tr>
 
-                  <tr>
-                    <td>
-                      ${floorSummaryHtml}
-                      ${floorBlocks}
-                    </td>
-                  </tr>
+                  <tr><td>${floorSummaryHtml}${floorBlocks}</td></tr>
                 </table>
               </td>
             </tr>
@@ -1014,6 +1008,7 @@ export default function App() {
     itemCard: { border: "1px solid #1f2937", background: "#020617", borderRadius: 12, padding: 12, marginBottom: 12 },
     itemTitle: { fontWeight: 700, marginBottom: 10, color: "#f8fafc" },
     twoColGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 },
+    miscBox: { border: "1px solid #334155", background: "#020617", borderRadius: 12, padding: 12, marginTop: 12 },
     smallLabel: { fontSize: 13, fontWeight: 600, color: "#cbd5e1", marginBottom: 6 },
     photoRow: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8, alignItems: "flex-start" },
     thumb: { width: 64, height: 64, objectFit: "cover", borderRadius: 10, border: "1px solid #334155", display: "block", marginBottom: 6 },
@@ -1275,6 +1270,31 @@ export default function App() {
                           })}
 
                           <textarea style={styles.textarea} placeholder="Notes" value={form.areas[area.name].notes} onChange={(e) => setAreaNotes(area.name, e.target.value)} />
+
+                          <div style={styles.miscBox}>
+                            <div style={styles.itemTitle}>Misc HOTSOS / Photo</div>
+
+                            <input
+                              style={styles.input}
+                              placeholder="Misc HOTSOS #"
+                              value={form.areas[area.name].miscHotsos}
+                              onChange={(e) => setAreaMiscHotsos(area.name, e.target.value)}
+                            />
+
+                            <div style={{ marginTop: 12 }}>
+                              <div style={styles.smallLabel}>Misc Photo</div>
+                              <input type="file" accept="image/*" capture="environment" multiple onChange={(e) => addAreaMiscPhotos(area.name, e.target.files)} />
+
+                              <div style={styles.photoRow}>
+                                {(form.areas[area.name].miscPhotos || []).map((photo, idx) => (
+                                  <div key={idx}>
+                                    <img src={photo} alt="Misc" style={styles.thumb} />
+                                    <button type="button" style={styles.btnSecondary} onMouseDown={press} onMouseUp={release} onMouseLeave={release} onClick={() => removeAreaMiscPhoto(area.name, idx)}>Delete</button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1349,7 +1369,13 @@ export default function App() {
 
                   <div style={styles.previewGroupBody}>
                     {group.areas.map((area) => {
-                      const hasContent = area.issues.length || area.temps.length || area.notes || area.routineChecks.length;
+                      const hasContent =
+                        area.issues.length ||
+                        area.temps.length ||
+                        area.notes ||
+                        area.routineChecks.length ||
+                        area.miscHotsos ||
+                        area.miscPhotos.length;
 
                       return (
                         <div key={area.name} style={styles.previewAreaCard}>
@@ -1391,6 +1417,14 @@ export default function App() {
                                   )}
                                 </div>
                               ))}
+                            </div>
+                          )}
+
+                          {(area.miscHotsos || area.miscPhotos.length) && (
+                            <div style={styles.notesBox}>
+                              <div style={{ fontWeight: 700, marginBottom: 6 }}>Misc HOTSOS / Photo</div>
+                              {area.miscHotsos && <div style={{ color: "#93c5fd", fontWeight: 700 }}>HOTSOS #{area.miscHotsos}</div>}
+                              {area.miscPhotos[0] && <img src={area.miscPhotos[0]} alt="Misc" style={{ ...styles.previewIssueImage, marginTop: 8 }} />}
                             </div>
                           )}
 
