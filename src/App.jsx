@@ -16,6 +16,7 @@ const ISSUE_OPTIONS = {
   "Reach-in Fridge": ["Temp Too Low", "Temp Too High"],
   "Walk-in Cooler": ["Temp Too Low", "Temp Too High"],
   "Walk-in": ["Temp Too Low", "Temp Too High"],
+  "Breakroom Cleanliness": ["No Issues", "Room Needs Cleaning", "Floors Need Cleaning", "Tables Need Cleaning"],
 };
 
 const STRUCTURE = [
@@ -41,6 +42,7 @@ const STRUCTURE = [
       { name: "201 Pantry", items: ["Hand Sink", "Reach-in Fridge"] },
       { name: "204 Pantry", items: ["Hand Sink", "Reach-in Fridge"] },
       { name: "205 Ice Machine", items: ["Hand Sink", "Ice Machine"] },
+      { name: "Breakroom", items: ["Hand Sink", "Breakroom Cleanliness"] },
     ],
   },
   {
@@ -540,7 +542,7 @@ export default function App() {
           .map(([itemName, item]) => ({ itemName, temperature: item.temperature }));
 
         const routineChecks = Object.entries(areaItems)
-          .filter(([itemName]) => itemName === "Hand Sink" || itemName === "Ice Machine")
+          .filter(([itemName]) => itemName === "Hand Sink" || itemName === "Ice Machine" || itemName === "Breakroom Cleanliness")
           .map(([itemName, item]) => ({
             itemName,
             status: item.status === "Issue" ? "Issue" : "OK",
